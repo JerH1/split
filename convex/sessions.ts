@@ -78,7 +78,7 @@ export const updateTip = mutation({
     tipType: v.union(
       v.literal("percent_subtotal"),
       v.literal("percent_total"),
-      v.literal("manual")
+      v.literal("manual"),
     ),
     tipValue: v.number(),
   },

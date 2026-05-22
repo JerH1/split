@@ -29,6 +29,7 @@ To run a single test file: `npx vitest run convex/calculations.test.ts`
 **Split** is a real-time collaborative bill-splitting app. No authentication — 6-character alphanumeric session codes are the security boundary.
 
 ### Stack
+
 - **Frontend**: React 19 + React Router 7 + TailwindCSS 4, built with Vite
 - **Backend**: [Convex](https://convex.dev) — serverless real-time database with TypeScript functions
 - **AI**: Anthropic SDK — Claude Vision API for receipt OCR via `convex/actions/parseReceipt.ts`
@@ -48,6 +49,7 @@ To run a single test file: `npx vitest run convex/calculations.test.ts`
 **Every table has `sessionId`.** Denormalized for efficient session-scoped queries — all indexes include `sessionId`.
 
 ### Backend (`convex/`)
+
 - `schema.ts` — Data model: `sessions`, `participants`, `items`, `claims`, `fees`
 - `calculations.ts` — Pure tax/tip distribution logic (heavily tested)
 - `sessions.ts` / `participants.ts` / `items.ts` / `claims.ts` / `fees.ts` — CRUD mutations and queries
@@ -55,11 +57,13 @@ To run a single test file: `npx vitest run convex/calculations.test.ts`
 - `validation.ts` — Input bounds (names ≤100 chars, items ≤200 chars, money ≤$100k)
 
 ### Frontend (`src/`)
+
 - `pages/Home.tsx` — Create/join sessions, local history via `lib/billHistory.ts`
 - `pages/Session.tsx` — Main bill workspace; manages receipt processing state machine
 - `components/Summary.tsx` — Per-person breakdown (subtotal + proportional tax/tip)
 - `components/TaxTipSettings.tsx` — Configure tax/tip (percent of subtotal, percent of total, or fixed)
 
 ### Environment Variables
+
 - `ANTHROPIC_API_KEY` — Required in `.env.local` for receipt OCR
 - `VITE_CONVEX_URL` — Set automatically by `npx convex dev`

@@ -30,7 +30,7 @@ export default function ReceiptReview({
 
   // Local state for input fields - allows typing without auto-formatting
   const [subtotalInput, setSubtotalInput] = useState(
-    initialSubtotal?.toFixed(2) ?? ""
+    initialSubtotal?.toFixed(2) ?? "",
   );
   const [taxInput, setTaxInput] = useState(initialTax?.toFixed(2) ?? "");
 
@@ -63,16 +63,14 @@ export default function ReceiptReview({
   // Calculate total from items, or use subtotal + tax if provided
   const calculatedItemsTotal = editedItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
-    0
+    0,
   );
   const displayTotal =
-    subtotal !== null && tax !== null
-      ? subtotal + tax
-      : calculatedItemsTotal;
+    subtotal !== null && tax !== null ? subtotal + tax : calculatedItemsTotal;
 
   function handleItemChange(
     index: number,
-    updated: { name: string; price: number; quantity: number }
+    updated: { name: string; price: number; quantity: number },
   ) {
     const newItems = [...editedItems];
     newItems[index] = updated;

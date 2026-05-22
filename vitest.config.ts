@@ -7,9 +7,7 @@ export default defineConfig({
     globals: true,
     // convex-test requires node environment for fs operations
     // import.meta.glob is handled by Vite plugin automatically
-    environmentMatchGlobs: [
-      ["convex/**/*.test.ts", "node"],
-    ],
+    environmentMatchGlobs: [["convex/**/*.test.ts", "node"]],
     // Required for convex-test to resolve module paths
     server: {
       deps: {

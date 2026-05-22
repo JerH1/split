@@ -54,7 +54,8 @@ export default function Session() {
   const [showReceiptImage, setShowReceiptImage] = useState(false);
 
   // State to track participant ID after just joining (before localStorage is read again)
-  const [justJoinedParticipantId, setJustJoinedParticipantId] = useState<Id<"participants"> | null>(null);
+  const [justJoinedParticipantId, setJustJoinedParticipantId] =
+    useState<Id<"participants"> | null>(null);
 
   // Fetch session by code
   const session = useQuery(api.sessions.getByCode, code ? { code } : "skip");
@@ -66,14 +67,15 @@ export default function Session() {
   }, [code]);
 
   // Use justJoinedParticipantId if set, otherwise use stored
-  const effectiveStoredParticipantId = justJoinedParticipantId ?? storedParticipantId;
+  const effectiveStoredParticipantId =
+    justJoinedParticipantId ?? storedParticipantId;
 
   // Fetch current participant data
   const currentParticipant = useQuery(
     api.participants.getById,
     effectiveStoredParticipantId
       ? { participantId: effectiveStoredParticipantId as Id<"participants"> }
-      : "skip"
+      : "skip",
   );
 
   // Derive current participant info (null if not joined)
@@ -83,25 +85,25 @@ export default function Session() {
   // Fetch items for this session
   const items = useQuery(
     api.items.listBySession,
-    session ? { sessionId: session._id } : "skip"
+    session ? { sessionId: session._id } : "skip",
   );
 
   // Fetch participants for this session
   const participants = useQuery(
     api.participants.listBySession,
-    session ? { sessionId: session._id } : "skip"
+    session ? { sessionId: session._id } : "skip",
   );
 
   // Fetch claims for this session
   const claims = useQuery(
     api.claims.listBySession,
-    session ? { sessionId: session._id } : "skip"
+    session ? { sessionId: session._id } : "skip",
   );
 
   // Fetch fees for this session
   const fees = useQuery(
     api.fees.listBySession,
-    session ? { sessionId: session._id } : "skip"
+    session ? { sessionId: session._id } : "skip",
   );
 
   // Compute display fees with legacy fallback
@@ -114,11 +116,13 @@ export default function Session() {
     }
     // Legacy fallback: synthesize fee from session.tax
     if (session?.tax && session.tax > 0) {
-      return [{
-        _id: "legacy-tax" as Id<"fees">,
-        label: "Tax",
-        amount: session.tax,
-      }];
+      return [
+        {
+          _id: "legacy-tax" as Id<"fees">,
+          label: "Tax",
+          amount: session.tax,
+        },
+      ];
     }
     // No fees
     return [];
@@ -142,7 +146,9 @@ export default function Session() {
   const [copied, setCopied] = useState(false);
 
   // Track join notifications
-  const [joinToasts, setJoinToasts] = useState<Array<{ id: string; name: string }>>([]);
+  const [joinToasts, setJoinToasts] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
   const mountTimeRef = useRef(Date.now());
   const previousParticipantIdsRef = useRef<Set<string>>(new Set());
 
@@ -171,7 +177,7 @@ export default function Session() {
       (p) =>
         !prevIds.has(p._id) &&
         prevIds.size > 0 && // Skip initial load
-        p.joinedAt > mountTimeRef.current
+        p.joinedAt > mountTimeRef.current,
     );
 
     // Queue toasts for new participants
@@ -198,7 +204,9 @@ export default function Session() {
       if ("error" in result) {
         // Check for validation rejection (non-receipt)
         if ("rejection_reason" in result && result.rejection_reason) {
-          const msg = REJECTION_MESSAGES[result.rejection_reason] || REJECTION_MESSAGES.other;
+          const msg =
+            REJECTION_MESSAGES[result.rejection_reason] ||
+            REJECTION_MESSAGES.other;
           setReceiptState({
             step: "error",
             message: `${msg.title}\n\n${msg.hint}`,
@@ -206,7 +214,10 @@ export default function Session() {
           return;
         }
         // Existing parse error handling
-        const rawPreview = "raw" in result && result.raw ? `\n\nRaw response: ${result.raw.slice(0, 500)}` : "";
+        const rawPreview =
+          "raw" in result && result.raw
+            ? `\n\nRaw response: ${result.raw.slice(0, 500)}`
+            : "";
         setReceiptState({
           step: "error",
           message: `OCR failed: ${result.error}.${rawPreview}`,
@@ -224,7 +235,11 @@ export default function Session() {
       if (!currentParticipantId) {
         throw new Error("Must be joined to upload receipt");
       }
-      await addBulk({ sessionId: session._id, items: itemsInCents, participantId: currentParticipantId });
+      await addBulk({
+        sessionId: session._id,
+        items: itemsInCents,
+        participantId: currentParticipantId,
+      });
 
       // Add fees from receipt (convert to cents)
       if (result.fees && result.fees.length > 0) {
@@ -244,7 +259,8 @@ export default function Session() {
         "handwritten_tip" in result &&
         result.handwritten_tip?.detected &&
         result.handwritten_tip.amount !== null &&
-        result.handwritten_tip.confidence >= HANDWRITTEN_TIP_CONFIDENCE_THRESHOLD
+        result.handwritten_tip.confidence >=
+          HANDWRITTEN_TIP_CONFIDENCE_THRESHOLD
       ) {
         await updateTip({
           sessionId: session._id,
@@ -283,10 +299,12 @@ export default function Session() {
   if (session === null) {
     return (
       <div className="p-4 text-center">
-        <h1 className="text-xl font-semibold text-gray-900 mb-2">Bill Not Found</h1>
+        <h1 className="text-xl font-semibold text-gray-900 mb-2">
+          Bill Not Found
+        </h1>
         <p className="text-gray-600 mb-4">
-          Code "{code}" doesn't match any active bill.
-          It might have expired or there's a typo.
+          Code "{code}" doesn't match any active bill. It might have expired or
+          there's a typo.
         </p>
         <Link to="/" className="text-blue-500 hover:text-blue-600 font-medium">
           ← Start a new bill
@@ -336,9 +354,19 @@ export default function Session() {
   }
 
   // Draft item handlers
-  async function handleDraftSave(name: string, price: number, quantity: number) {
+  async function handleDraftSave(
+    name: string,
+    price: number,
+    quantity: number,
+  ) {
     if (!session || !currentParticipantId) return;
-    await addItem({ sessionId: session._id, participantId: currentParticipantId, name, price, quantity });
+    await addItem({
+      sessionId: session._id,
+      participantId: currentParticipantId,
+      name,
+      price,
+      quantity,
+    });
     setDraftItem(null);
   }
 
@@ -440,7 +468,8 @@ export default function Session() {
                   {session.receiptImageId && (
                     <div className="mb-3">
                       <p className="text-sm text-gray-600">
-                        Receipt uploaded. Upload a new one to replace existing items.
+                        Receipt uploaded. Upload a new one to replace existing
+                        items.
                       </p>
                       <button
                         onClick={() => setShowReceiptImage(true)}
@@ -506,8 +535,12 @@ export default function Session() {
                     </>
                   ) : (
                     <>
-                      <p className="text-red-600 font-medium">Something went wrong</p>
-                      <p className="text-sm text-gray-600 mt-1">{receiptState.message}</p>
+                      <p className="text-red-600 font-medium">
+                        Something went wrong
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {receiptState.message}
+                      </p>
                     </>
                   )}
                   <button
@@ -561,7 +594,9 @@ export default function Session() {
 
               {/* Add item button - available to all participants */}
               <button
-                onClick={() => setDraftItem({ name: "", price: 0, quantity: 1 })}
+                onClick={() =>
+                  setDraftItem({ name: "", price: 0, quantity: 1 })
+                }
                 disabled={draftItem !== null}
                 className={`w-full mt-2 py-3 px-4 border-2 border-dashed rounded-lg transition-colors ${
                   draftItem !== null

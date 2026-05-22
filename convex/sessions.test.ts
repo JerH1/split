@@ -78,7 +78,7 @@ describe("sessions authorization", () => {
           participantId: nonHostParticipantId,
           tipType: "percent_subtotal",
           tipValue: 18,
-        })
+        }),
       ).rejects.toThrow("Only the host can modify bill settings");
     });
 
@@ -123,7 +123,7 @@ describe("sessions authorization", () => {
           participantId: otherSessionHostId,
           tipType: "percent_subtotal",
           tipValue: 18,
-        })
+        }),
       ).rejects.toThrow("Participant not in this session");
     });
   });
@@ -191,7 +191,7 @@ describe("sessions authorization", () => {
           sessionId,
           participantId: nonHostParticipantId,
           tax: 850,
-        })
+        }),
       ).rejects.toThrow("Only the host can modify bill settings");
     });
 
@@ -235,7 +235,7 @@ describe("sessions authorization", () => {
           sessionId,
           participantId: otherSessionHostId,
           tax: 850,
-        })
+        }),
       ).rejects.toThrow("Participant not in this session");
     });
   });
@@ -303,7 +303,7 @@ describe("sessions authorization", () => {
           sessionId,
           participantId: nonHostParticipantId,
           gratuity: 1500,
-        })
+        }),
       ).rejects.toThrow("Only the host can modify bill settings");
     });
 
@@ -347,7 +347,7 @@ describe("sessions authorization", () => {
           sessionId,
           participantId: otherSessionHostId,
           gratuity: 1500,
-        })
+        }),
       ).rejects.toThrow("Participant not in this session");
     });
   });

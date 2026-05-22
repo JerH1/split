@@ -23,7 +23,9 @@ export function getBillHistory(): BillHistoryEntry[] {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const entries: BillHistoryEntry[] = JSON.parse(raw);
-    return entries.sort((a, b) => b.createdAt - a.createdAt).slice(0, MAX_ENTRIES);
+    return entries
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, MAX_ENTRIES);
   } catch {
     // localStorage can fail in private browsing mode or if storage is full
     return [];
@@ -34,7 +36,7 @@ export function getBillHistory(): BillHistoryEntry[] {
  * Add a bill to history. Dedupes by code - if exists, updates instead of adding duplicate.
  */
 export function addBillToHistory(
-  entry: Omit<BillHistoryEntry, "createdAt">
+  entry: Omit<BillHistoryEntry, "createdAt">,
 ): void {
   try {
     const entries = getBillHistory();

@@ -43,6 +43,7 @@ ANTHROPIC_API_KEY=your_api_key_here
 ```
 
 **Getting an API key:**
+
 1. Go to [console.anthropic.com](https://console.anthropic.com)
 2. Create an account or sign in
 3. Navigate to API Keys and create a new key

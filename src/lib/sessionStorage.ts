@@ -27,7 +27,7 @@ export function getStoredParticipant(sessionCode: string): string | null {
  */
 export function storeParticipant(
   sessionCode: string,
-  participantId: string
+  participantId: string,
 ): void {
   try {
     const key = `${STORAGE_KEY_PREFIX}${sessionCode}`;

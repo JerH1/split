@@ -3,8 +3,13 @@ import { test, expect } from "@playwright/test";
 test.describe("Join Flow", () => {
   // Helper to create a bill and extract the code
   async function createBillAsHost(
-    hostContext: Awaited<ReturnType<typeof test.info>["project"]["use"]["browser"]["newContext"]>
-  ): Promise<{ page: Awaited<ReturnType<typeof hostContext.newPage>>; code: string }> {
+    hostContext: Awaited<
+      ReturnType<typeof test.info>["project"]["use"]["browser"]["newContext"]
+    >,
+  ): Promise<{
+    page: Awaited<ReturnType<typeof hostContext.newPage>>;
+    code: string;
+  }> {
     const hostPage = await hostContext.newPage();
     await hostPage.goto("/");
     await hostPage.fill("input#name", "Host");
@@ -106,7 +111,9 @@ test.describe("Join Flow", () => {
       await guestPage.click('button:has-text("Join Bill")');
 
       // 3. Wait for items to load - verify "Tap to claim" hint is visible
-      const pizzaItem = guestPage.locator(".rounded-lg").filter({ hasText: "Pizza" });
+      const pizzaItem = guestPage
+        .locator(".rounded-lg")
+        .filter({ hasText: "Pizza" });
       await expect(pizzaItem).toBeVisible();
       await expect(pizzaItem.locator("text=Tap to claim")).toBeVisible();
 
@@ -158,7 +165,7 @@ test.describe("Join Flow", () => {
         guestPage
           .locator(".rounded-lg")
           .filter({ hasText: "Pasta" })
-          .locator("text=Carol")
+          .locator("text=Carol"),
       ).toBeVisible();
 
       // 3. Navigate to Summary tab
@@ -166,7 +173,9 @@ test.describe("Join Flow", () => {
 
       // 4. Verify Carol's participant card shows with correct total
       // Carol's card should have $20.00 (font-bold for total)
-      const carolCard = guestPage.locator(".rounded-lg.border-2").filter({ hasText: "Carol" });
+      const carolCard = guestPage
+        .locator(".rounded-lg.border-2")
+        .filter({ hasText: "Carol" });
       await expect(carolCard).toBeVisible();
 
       // 5. Verify the total includes $20.00 (the claimed item)

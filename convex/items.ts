@@ -1,6 +1,10 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { validateItemName, validateMoney, validateQuantity } from "./validation";
+import {
+  validateItemName,
+  validateMoney,
+  validateQuantity,
+} from "./validation";
 
 // List all items in a session
 export const listBySession = query({
@@ -38,9 +42,8 @@ export const add = mutation({
     // Validate inputs
     const validatedName = validateItemName(args.name);
     const validatedPrice = validateMoney(args.price, "Price");
-    const validatedQuantity = args.quantity !== undefined
-      ? validateQuantity(args.quantity)
-      : 1;
+    const validatedQuantity =
+      args.quantity !== undefined ? validateQuantity(args.quantity) : 1;
 
     const itemId = await ctx.db.insert("items", {
       sessionId: args.sessionId,
@@ -137,11 +140,13 @@ export const addBulk = mutation({
   args: {
     sessionId: v.id("sessions"),
     participantId: v.id("participants"),
-    items: v.array(v.object({
-      name: v.string(),
-      price: v.number(),
-      quantity: v.optional(v.number()),
-    })),
+    items: v.array(
+      v.object({
+        name: v.string(),
+        price: v.number(),
+        quantity: v.optional(v.number()),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     // Validate array length to prevent DoS
@@ -164,9 +169,8 @@ export const addBulk = mutation({
     const validatedItems = args.items.map((item) => ({
       name: validateItemName(item.name),
       price: validateMoney(item.price, "Price"),
-      quantity: item.quantity !== undefined
-        ? validateQuantity(item.quantity)
-        : 1,
+      quantity:
+        item.quantity !== undefined ? validateQuantity(item.quantity) : 1,
     }));
 
     // First, delete all existing items and their claims for this session

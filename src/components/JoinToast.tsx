@@ -25,9 +25,7 @@ export default function JoinToast({ name, onDismiss }: JoinToastProps) {
   return (
     <div
       className={`fixed top-14 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
-        isVisible
-          ? "opacity-100 translate-y-0"
-          : "opacity-0 -translate-y-2"
+        isVisible ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2"
       }`}
     >
       <div className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm shadow-sm">

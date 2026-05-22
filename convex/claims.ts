@@ -29,7 +29,9 @@ export const getByParticipant = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("claims")
-      .withIndex("by_participant", (q) => q.eq("participantId", args.participantId))
+      .withIndex("by_participant", (q) =>
+        q.eq("participantId", args.participantId),
+      )
       .collect();
   },
 });

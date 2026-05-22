@@ -111,7 +111,14 @@ const receiptValidationSchema = {
           additionalProperties: false,
         },
       },
-      required: ["merchant", "items", "subtotal", "fees", "total", "handwritten_tip"],
+      required: [
+        "merchant",
+        "items",
+        "subtotal",
+        "fees",
+        "total",
+        "handwritten_tip",
+      ],
       additionalProperties: false,
     },
     // Present when is_receipt is false

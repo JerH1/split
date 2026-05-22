@@ -18,7 +18,9 @@ function validateFeeLabel(label: string): string {
     throw new Error("Fee label cannot be empty");
   }
   if (trimmed.length > MAX_FEE_LABEL_LENGTH) {
-    throw new Error(`Fee label cannot exceed ${MAX_FEE_LABEL_LENGTH} characters`);
+    throw new Error(
+      `Fee label cannot exceed ${MAX_FEE_LABEL_LENGTH} characters`,
+    );
   }
   return trimmed;
 }
@@ -72,10 +74,12 @@ export const addBulk = mutation({
   args: {
     sessionId: v.id("sessions"),
     participantId: v.id("participants"),
-    fees: v.array(v.object({
-      label: v.string(),
-      amount: v.number(),
-    })),
+    fees: v.array(
+      v.object({
+        label: v.string(),
+        amount: v.number(),
+      }),
+    ),
   },
   handler: async (ctx, args) => {
     // Validate array length to prevent DoS

@@ -6,7 +6,10 @@
  * Uses Math.floor for division, distributes remainder cents to first claimants.
  * Example: $10 (1000 cents) split 3 ways = [334, 333, 333] cents
  */
-export function calculateItemShare(itemPrice: number, claimCount: number): number[] {
+export function calculateItemShare(
+  itemPrice: number,
+  claimCount: number,
+): number[] {
   if (claimCount <= 0) return [];
   if (claimCount === 1) return [itemPrice];
 
@@ -27,7 +30,7 @@ export function calculateItemShare(itemPrice: number, claimCount: number): numbe
  */
 export function calculateSubtotalShare(
   participantItemTotal: number,
-  groupSubtotal: number
+  groupSubtotal: number,
 ): number {
   if (groupSubtotal === 0) return 0;
   return participantItemTotal / groupSubtotal;
@@ -40,7 +43,7 @@ export function calculateSubtotalShare(
 export function calculateTaxShare(
   participantSubtotal: number,
   groupSubtotal: number,
-  totalTax: number
+  totalTax: number,
 ): number {
   if (groupSubtotal === 0) return 0;
   const proportion = participantSubtotal / groupSubtotal;
@@ -59,7 +62,7 @@ export function calculateTipShare(
   groupSubtotal: number,
   _groupTax: number,
   tipType: "percent_subtotal" | "percent_total" | "manual",
-  tipValue: number
+  tipValue: number,
 ): number {
   if (tipValue === 0) return 0;
 
@@ -70,7 +73,9 @@ export function calculateTipShare(
 
     case "percent_total":
       // tipValue is a percentage applied to subtotal + tax
-      return Math.round(((participantSubtotal + participantTax) * tipValue) / 100);
+      return Math.round(
+        ((participantSubtotal + participantTax) * tipValue) / 100,
+      );
 
     case "manual":
       // tipValue is a fixed amount in cents; distribute proportionally by subtotal
@@ -89,7 +94,7 @@ export function calculateTipShare(
 export function calculateParticipantTotal(
   subtotal: number,
   tax: number,
-  tip: number
+  tip: number,
 ): number {
   return subtotal + tax + tip;
 }
@@ -101,7 +106,7 @@ export function calculateParticipantTotal(
  */
 export function distributeWithRemainder(
   total: number,
-  proportions: number[]
+  proportions: number[],
 ): number[] {
   if (proportions.length === 0) return [];
 
@@ -115,7 +120,7 @@ export function distributeWithRemainder(
 
   // Calculate initial shares (floor)
   const shares = proportions.map((p) =>
-    Math.floor((p / totalProportion) * total)
+    Math.floor((p / totalProportion) * total),
   );
 
   // Distribute remainder to those with largest fractional parts

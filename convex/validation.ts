@@ -29,12 +29,17 @@ export function validateItemName(name: string): string {
     throw new Error("Item name cannot be empty");
   }
   if (trimmed.length > MAX_ITEM_NAME_LENGTH) {
-    throw new Error(`Item name cannot exceed ${MAX_ITEM_NAME_LENGTH} characters`);
+    throw new Error(
+      `Item name cannot exceed ${MAX_ITEM_NAME_LENGTH} characters`,
+    );
   }
   return trimmed;
 }
 
-export function validateMoney(cents: number, fieldName: string = "Amount"): number {
+export function validateMoney(
+  cents: number,
+  fieldName: string = "Amount",
+): number {
   if (!Number.isFinite(cents)) {
     throw new Error(`${fieldName} must be a valid number`);
   }

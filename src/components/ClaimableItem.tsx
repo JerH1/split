@@ -51,7 +51,7 @@ export default function ClaimableItem({
   // Local state for editing
   const [editName, setEditName] = useState(item.name);
   const [editPriceInput, setEditPriceInput] = useState(
-    (item.price / 100).toFixed(2)
+    (item.price / 100).toFixed(2),
   );
   const [editQuantity, setEditQuantity] = useState(item.quantity);
 
@@ -118,7 +118,10 @@ export default function ClaimableItem({
     setIsEditing(true);
   }
 
-  function handleHostUnclaim(e: React.MouseEvent, participantId: Id<"participants">) {
+  function handleHostUnclaim(
+    e: React.MouseEvent,
+    participantId: Id<"participants">,
+  ) {
     e.stopPropagation(); // Prevent claim toggle
     if (!currentParticipantId) return;
     unclaimByHost({
@@ -164,7 +167,10 @@ export default function ClaimableItem({
       onDraftCancel();
     } else if (currentParticipantId) {
       // Only host can delete items (enforced by backend), but UI shows delete to all editors
-      await removeItem({ itemId: item._id, participantId: currentParticipantId });
+      await removeItem({
+        itemId: item._id,
+        participantId: currentParticipantId,
+      });
     }
   }
 
@@ -288,7 +294,9 @@ export default function ClaimableItem({
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-gray-700">${(item.price / 100).toFixed(2)}</span>
+          <span className="text-gray-700">
+            ${(item.price / 100).toFixed(2)}
+          </span>
           <button
             onClick={handleEdit}
             className="min-h-[44px] min-w-[44px] p-2 text-gray-500 hover:bg-gray-200 rounded-md transition-colors flex items-center justify-center"
@@ -310,7 +318,9 @@ export default function ClaimableItem({
       {claimerNames.length > 0 && (
         <div className="mt-2 text-sm text-gray-600 flex flex-wrap gap-1">
           {claims.map((c) => {
-            const participant = participants.find((p) => p._id === c.participantId);
+            const participant = participants.find(
+              (p) => p._id === c.participantId,
+            );
             const name = participant?.name ?? "Unknown";
             const isCurrentUser = c.participantId === currentParticipantId;
             return (
@@ -351,9 +361,7 @@ export default function ClaimableItem({
 
       {/* Unclaimed indicator */}
       {claimerNames.length === 0 && canClaim && (
-        <div className="mt-2 text-sm text-gray-400 italic">
-          Tap to claim
-        </div>
+        <div className="mt-2 text-sm text-gray-400 italic">Tap to claim</div>
       )}
 
       {/* Not joined indicator */}

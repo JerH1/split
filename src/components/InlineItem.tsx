@@ -19,7 +19,9 @@ export default function InlineItem({ item, participantId }: InlineItemProps) {
 
   // Local state for editing
   const [editName, setEditName] = useState(item.name);
-  const [editPriceInput, setEditPriceInput] = useState((item.price / 100).toFixed(2));
+  const [editPriceInput, setEditPriceInput] = useState(
+    (item.price / 100).toFixed(2),
+  );
   const [editQuantity, setEditQuantity] = useState(item.quantity);
 
   // Sync local state when item changes externally
@@ -76,7 +78,9 @@ export default function InlineItem({ item, participantId }: InlineItemProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-gray-700">${(item.price / 100).toFixed(2)}</span>
+          <span className="text-gray-700">
+            ${(item.price / 100).toFixed(2)}
+          </span>
           <button
             onClick={handleEdit}
             className="min-h-[44px] min-w-[44px] p-2 text-gray-500 hover:bg-gray-200 rounded-md transition-colors flex items-center justify-center"
@@ -119,7 +123,9 @@ export default function InlineItem({ item, participantId }: InlineItemProps) {
               type="text"
               inputMode="decimal"
               value={editPriceInput}
-              onChange={(e) => setEditPriceInput(e.target.value.replace(/[^0-9.]/g, ""))}
+              onChange={(e) =>
+                setEditPriceInput(e.target.value.replace(/[^0-9.]/g, ""))
+              }
               onFocus={(e) => e.target.select()}
               onBlur={(e) => {
                 const value = parseFloat(e.target.value);
@@ -138,7 +144,9 @@ export default function InlineItem({ item, participantId }: InlineItemProps) {
               <input
                 type="number"
                 value={editQuantity}
-                onChange={(e) => setEditQuantity(parseInt(e.target.value, 10) || 1)}
+                onChange={(e) =>
+                  setEditQuantity(parseInt(e.target.value, 10) || 1)
+                }
                 min="1"
                 className="w-10 min-h-[44px] px-1 py-2 border-0 focus:outline-none focus:ring-0 bg-transparent"
               />

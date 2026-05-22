@@ -21,7 +21,7 @@ describe("session creation", () => {
 
     // Verify host participant was created
     const participant = await t.run(async (ctx) =>
-      ctx.db.get(result.hostParticipantId)
+      ctx.db.get(result.hostParticipantId),
     );
 
     expect(participant).not.toBeNull();
@@ -38,7 +38,7 @@ describe("session creation", () => {
     });
 
     const participant = await t.run(async (ctx) =>
-      ctx.db.get(result.hostParticipantId)
+      ctx.db.get(result.hostParticipantId),
     );
 
     expect(participant?.name).toBe("Bob");
@@ -114,7 +114,7 @@ describe("participant join", () => {
       t.mutation(api.participants.join, {
         sessionId,
         name: "Guest",
-      })
+      }),
     ).rejects.toThrow("Session not found");
   });
 });
@@ -133,7 +133,7 @@ describe("duplicate name handling", () => {
       t.mutation(api.participants.join, {
         sessionId,
         name: "Alice",
-      })
+      }),
     ).rejects.toThrow("That name is already taken");
   });
 
@@ -150,21 +150,21 @@ describe("duplicate name handling", () => {
       t.mutation(api.participants.join, {
         sessionId,
         name: "john",
-      })
+      }),
     ).rejects.toThrow("That name is already taken");
 
     await expect(
       t.mutation(api.participants.join, {
         sessionId,
         name: "JOHN",
-      })
+      }),
     ).rejects.toThrow("That name is already taken");
 
     await expect(
       t.mutation(api.participants.join, {
         sessionId,
         name: "JoHn",
-      })
+      }),
     ).rejects.toThrow("That name is already taken");
   });
 
@@ -213,7 +213,7 @@ describe("claim idempotency", () => {
     // Setup: Create session with item and participant
     const { sessionId, hostParticipantId } = await t.mutation(
       api.sessions.create,
-      { hostName: "Host" }
+      { hostName: "Host" },
     );
 
     const itemId = await t.mutation(api.items.add, {
@@ -246,7 +246,7 @@ describe("claim idempotency", () => {
     // Setup: Create session with item and participant
     const { sessionId, hostParticipantId } = await t.mutation(
       api.sessions.create,
-      { hostName: "Host" }
+      { hostName: "Host" },
     );
 
     const itemId = await t.mutation(api.items.add, {
@@ -274,7 +274,7 @@ describe("claim idempotency", () => {
       ctx.db
         .query("claims")
         .withIndex("by_item", (q) => q.eq("itemId", itemId))
-        .collect()
+        .collect(),
     );
 
     expect(allClaims).toHaveLength(1);
@@ -286,7 +286,7 @@ describe("claim idempotency", () => {
     // Setup: Create session with item and participant
     const { sessionId, hostParticipantId } = await t.mutation(
       api.sessions.create,
-      { hostName: "Host" }
+      { hostName: "Host" },
     );
 
     const itemId = await t.mutation(api.items.add, {
@@ -320,7 +320,7 @@ describe("item removal cascade", () => {
     // Setup: Create session with item
     const { sessionId, hostParticipantId } = await t.mutation(
       api.sessions.create,
-      { hostName: "Host" }
+      { hostName: "Host" },
     );
 
     const itemId = await t.mutation(api.items.add, {
@@ -347,7 +347,7 @@ describe("item removal cascade", () => {
     // Setup: Create session with host, item, and 2 participants who claim it
     const { sessionId, hostParticipantId } = await t.mutation(
       api.sessions.create,
-      { hostName: "Host" }
+      { hostName: "Host" },
     );
 
     const guest1Id = await t.mutation(api.participants.join, {
@@ -385,7 +385,7 @@ describe("item removal cascade", () => {
       ctx.db
         .query("claims")
         .withIndex("by_item", (q) => q.eq("itemId", itemId))
-        .collect()
+        .collect(),
     );
     expect(claimsBefore).toHaveLength(2);
 
@@ -403,7 +403,7 @@ describe("item removal cascade", () => {
       ctx.db
         .query("claims")
         .withIndex("by_item", (q) => q.eq("itemId", itemId))
-        .collect()
+        .collect(),
     );
     expect(claimsAfter).toHaveLength(0);
   });
@@ -414,7 +414,7 @@ describe("item removal cascade", () => {
     // Setup: Create session with unclaimed item
     const { sessionId, hostParticipantId } = await t.mutation(
       api.sessions.create,
-      { hostName: "Host" }
+      { hostName: "Host" },
     );
 
     const itemId = await t.mutation(api.items.add, {
@@ -429,7 +429,7 @@ describe("item removal cascade", () => {
       ctx.db
         .query("claims")
         .withIndex("by_item", (q) => q.eq("itemId", itemId))
-        .collect()
+        .collect(),
     );
     expect(claimsBefore).toHaveLength(0);
 
@@ -451,7 +451,7 @@ describe("input validation", () => {
       const t = convexTest(schema);
 
       await expect(
-        t.mutation(api.sessions.create, { hostName: "" })
+        t.mutation(api.sessions.create, { hostName: "" }),
       ).rejects.toThrow("cannot be empty");
     });
 
@@ -459,7 +459,7 @@ describe("input validation", () => {
       const t = convexTest(schema);
 
       await expect(
-        t.mutation(api.sessions.create, { hostName: "   " })
+        t.mutation(api.sessions.create, { hostName: "   " }),
       ).rejects.toThrow("cannot be empty");
     });
 
@@ -469,7 +469,7 @@ describe("input validation", () => {
       const longName = "A".repeat(101);
 
       await expect(
-        t.mutation(api.sessions.create, { hostName: longName })
+        t.mutation(api.sessions.create, { hostName: longName }),
       ).rejects.toThrow("cannot exceed 100 characters");
     });
 
@@ -496,7 +496,7 @@ describe("input validation", () => {
         t.mutation(api.participants.join, {
           sessionId,
           name: "",
-        })
+        }),
       ).rejects.toThrow("cannot be empty");
     });
 
@@ -511,7 +511,7 @@ describe("input validation", () => {
         t.mutation(api.participants.join, {
           sessionId,
           name: "   ",
-        })
+        }),
       ).rejects.toThrow("cannot be empty");
     });
 
@@ -528,7 +528,7 @@ describe("input validation", () => {
         t.mutation(api.participants.join, {
           sessionId,
           name: longName,
-        })
+        }),
       ).rejects.toThrow("cannot exceed 100 characters");
     });
   });
@@ -539,7 +539,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -548,7 +548,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           name: "Item",
           price: -100,
-        })
+        }),
       ).rejects.toThrow("cannot be negative");
     });
 
@@ -557,7 +557,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -566,7 +566,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           name: "Item",
           price: 10.5,
-        })
+        }),
       ).rejects.toThrow("must be a whole number");
     });
 
@@ -575,7 +575,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -584,7 +584,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           name: "Item",
           price: Infinity,
-        })
+        }),
       ).rejects.toThrow("must be a valid number");
     });
 
@@ -593,7 +593,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -602,7 +602,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           name: "Item",
           price: NaN,
-        })
+        }),
       ).rejects.toThrow("must be a valid number");
     });
 
@@ -611,7 +611,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       // MAX_MONEY_CENTS = 10,000,000 (= $100,000.00)
@@ -621,7 +621,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           name: "Item",
           price: 10_000_001, // $100,000.01
-        })
+        }),
       ).rejects.toThrow("cannot exceed $100,000");
     });
 
@@ -630,7 +630,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       // Exactly $100,000.00
@@ -649,7 +649,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -657,7 +657,7 @@ describe("input validation", () => {
           sessionId,
           participantId: hostParticipantId,
           tax: -50,
-        })
+        }),
       ).rejects.toThrow("cannot be negative");
     });
 
@@ -666,7 +666,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -674,7 +674,7 @@ describe("input validation", () => {
           sessionId,
           participantId: hostParticipantId,
           tax: 8.5,
-        })
+        }),
       ).rejects.toThrow("must be a whole number");
     });
   });
@@ -685,7 +685,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -694,7 +694,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           tipType: "percent_subtotal",
           tipValue: -5,
-        })
+        }),
       ).rejects.toThrow("cannot be negative");
     });
 
@@ -703,7 +703,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -712,7 +712,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           tipType: "percent_subtotal",
           tipValue: 150,
-        })
+        }),
       ).rejects.toThrow("cannot exceed 100%");
     });
 
@@ -721,7 +721,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -730,7 +730,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           tipType: "percent_subtotal",
           tipValue: Infinity,
-        })
+        }),
       ).rejects.toThrow("must be a valid number");
     });
 
@@ -739,7 +739,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await expect(
@@ -748,7 +748,7 @@ describe("input validation", () => {
           participantId: hostParticipantId,
           tipType: "percent_subtotal",
           tipValue: NaN,
-        })
+        }),
       ).rejects.toThrow("must be a valid number");
     });
 
@@ -757,7 +757,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await t.mutation(api.sessions.updateTip, {
@@ -776,7 +776,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await t.mutation(api.sessions.updateTip, {
@@ -795,7 +795,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await t.mutation(api.sessions.updateTip, {
@@ -814,7 +814,7 @@ describe("input validation", () => {
 
       const { sessionId, hostParticipantId } = await t.mutation(
         api.sessions.create,
-        { hostName: "Host" }
+        { hostName: "Host" },
       );
 
       await t.mutation(api.sessions.updateTip, {

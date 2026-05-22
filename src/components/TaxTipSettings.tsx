@@ -39,7 +39,9 @@ export default function TaxTipSettings({
   participantId,
 }: TaxTipSettingsProps) {
   // Local state for fee editing - keyed by fee ID
-  const [feeInputs, setFeeInputs] = useState<Map<string, FeeEditState>>(new Map());
+  const [feeInputs, setFeeInputs] = useState<Map<string, FeeEditState>>(
+    new Map(),
+  );
 
   // Ref to track newly added fee for auto-focus
   const newFeeIdRef = useRef<string | null>(null);
@@ -47,7 +49,9 @@ export default function TaxTipSettings({
 
   // Gratuity and tip state (unchanged from before)
   const [gratuityInput, setGratuityInput] = useState(
-    session.gratuity !== undefined ? (session.gratuity / 100).toFixed(2) : "0.00"
+    session.gratuity !== undefined
+      ? (session.gratuity / 100).toFixed(2)
+      : "0.00",
   );
   const [tipType, setTipType] = useState<
     "percent_subtotal" | "percent_total" | "manual"
@@ -57,7 +61,7 @@ export default function TaxTipSettings({
       ? tipType === "manual"
         ? (session.tipValue / 100).toFixed(2)
         : session.tipValue.toString()
-      : ""
+      : "",
   );
 
   // Sync fee inputs when fees change externally
@@ -66,7 +70,11 @@ export default function TaxTipSettings({
     for (const fee of fees) {
       const existing = feeInputs.get(fee._id);
       // Only update if the value changed externally (not during local editing)
-      if (!existing || (existing.label === fee.label && existing.amount === (fee.amount / 100).toFixed(2))) {
+      if (
+        !existing ||
+        (existing.label === fee.label &&
+          existing.amount === (fee.amount / 100).toFixed(2))
+      ) {
         newInputs.set(fee._id, {
           label: fee.label,
           amount: (fee.amount / 100).toFixed(2),
@@ -82,7 +90,9 @@ export default function TaxTipSettings({
   // Sync gratuity and tip when session changes
   useEffect(() => {
     setGratuityInput(
-      session.gratuity !== undefined ? (session.gratuity / 100).toFixed(2) : "0.00"
+      session.gratuity !== undefined
+        ? (session.gratuity / 100).toFixed(2)
+        : "0.00",
     );
     const newTipType = session.tipType ?? "percent_subtotal";
     setTipType(newTipType);
@@ -91,7 +101,7 @@ export default function TaxTipSettings({
         ? newTipType === "manual"
           ? (session.tipValue / 100).toFixed(2)
           : session.tipValue.toString()
-        : ""
+        : "",
     );
   }, [session.gratuity, session.tipType, session.tipValue]);
 
@@ -112,7 +122,9 @@ export default function TaxTipSettings({
 
   // Calculate total fees for preview
   const totalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
-  const currentGratuity = gratuityInput ? Math.round(parseFloat(gratuityInput) * 100) || 0 : 0;
+  const currentGratuity = gratuityInput
+    ? Math.round(parseFloat(gratuityInput) * 100) || 0
+    : 0;
   const currentTipValue = tipInput
     ? tipType === "manual"
       ? Math.round(parseFloat(tipInput) * 100) || 0
@@ -126,11 +138,15 @@ export default function TaxTipSettings({
     groupSubtotal,
     totalFees,
     tipType,
-    currentTipValue
+    currentTipValue,
   );
 
   // Fee handlers
-  function handleFeeInputChange(feeId: string, field: "label" | "amount", value: string) {
+  function handleFeeInputChange(
+    feeId: string,
+    field: "label" | "amount",
+    value: string,
+  ) {
     setFeeInputs((prev) => {
       const newMap = new Map(prev);
       const existing = newMap.get(feeId) || { label: "", amount: "0.00" };
@@ -173,7 +189,7 @@ export default function TaxTipSettings({
 
   // Tip handlers
   async function handleTipTypeChange(
-    newType: "percent_subtotal" | "percent_total" | "manual"
+    newType: "percent_subtotal" | "percent_total" | "manual",
   ) {
     if (!participantId) return;
     const oldType = tipType;
@@ -229,10 +245,14 @@ export default function TaxTipSettings({
         {/* Fee list */}
         <div className="space-y-2">
           {fees.map((fee) => {
-            const input = feeInputs.get(fee._id) || { label: fee.label, amount: (fee.amount / 100).toFixed(2) };
+            const input = feeInputs.get(fee._id) || {
+              label: fee.label,
+              amount: (fee.amount / 100).toFixed(2),
+            };
             const isLastAdded = fee._id === newFeeIdRef.current;
             // Synthetic legacy fees should always render as read-only
-            const isLegacyFee = typeof fee._id === 'string' && fee._id.startsWith('legacy-');
+            const isLegacyFee =
+              typeof fee._id === "string" && fee._id.startsWith("legacy-");
 
             return (
               <div key={fee._id} className="flex items-center gap-2">
@@ -242,7 +262,9 @@ export default function TaxTipSettings({
                       ref={isLastAdded ? newFeeLabelInputRef : null}
                       type="text"
                       value={input.label}
-                      onChange={(e) => handleFeeInputChange(fee._id, "label", e.target.value)}
+                      onChange={(e) =>
+                        handleFeeInputChange(fee._id, "label", e.target.value)
+                      }
                       onBlur={() => handleFeeBlur(fee._id, "label")}
                       onFocus={(e) => e.target.select()}
                       placeholder="Label"
@@ -254,7 +276,13 @@ export default function TaxTipSettings({
                         type="text"
                         inputMode="decimal"
                         value={input.amount}
-                        onChange={(e) => handleFeeInputChange(fee._id, "amount", e.target.value)}
+                        onChange={(e) =>
+                          handleFeeInputChange(
+                            fee._id,
+                            "amount",
+                            e.target.value,
+                          )
+                        }
                         onBlur={() => handleFeeBlur(fee._id, "amount")}
                         onFocus={(e) => e.target.select()}
                         placeholder="0.00"
@@ -266,15 +294,29 @@ export default function TaxTipSettings({
                       className="p-2 text-gray-400 hover:text-red-500 transition-colors"
                       aria-label={`Remove ${fee.label}`}
                     >
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      <svg
+                        className="w-5 h-5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
                       </svg>
                     </button>
                   </>
                 ) : (
                   <>
-                    <span className="flex-1 text-gray-700 text-sm">{fee.label}</span>
-                    <span className="text-gray-900 font-medium">${(fee.amount / 100).toFixed(2)}</span>
+                    <span className="flex-1 text-gray-700 text-sm">
+                      {fee.label}
+                    </span>
+                    <span className="text-gray-900 font-medium">
+                      ${(fee.amount / 100).toFixed(2)}
+                    </span>
                   </>
                 )}
               </div>
@@ -293,7 +335,9 @@ export default function TaxTipSettings({
 
           {/* Empty state for non-host */}
           {!isHost && fees.length === 0 && (
-            <p className="text-sm text-gray-500 italic">No taxes or fees added</p>
+            <p className="text-sm text-gray-500 italic">
+              No taxes or fees added
+            </p>
           )}
         </div>
 
@@ -302,7 +346,9 @@ export default function TaxTipSettings({
           <div className="mt-3 pt-2 border-t border-gray-200">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Total taxes & fees:</span>
-              <span className="font-medium">${(totalFees / 100).toFixed(2)}</span>
+              <span className="font-medium">
+                ${(totalFees / 100).toFixed(2)}
+              </span>
             </div>
           </div>
         )}
@@ -394,9 +440,12 @@ export default function TaxTipSettings({
           <div className="space-y-2">
             {/* Read-only display for non-host */}
             <div className="text-sm text-gray-600">
-              {tipType === "percent_subtotal" && `${tipInput || 0}% on subtotal`}
-              {tipType === "percent_total" && `${tipInput || 0}% on subtotal + tax`}
-              {tipType === "manual" && `$${tipInput ? parseFloat(tipInput).toFixed(2) : "0.00"} fixed amount`}
+              {tipType === "percent_subtotal" &&
+                `${tipInput || 0}% on subtotal`}
+              {tipType === "percent_total" &&
+                `${tipInput || 0}% on subtotal + tax`}
+              {tipType === "manual" &&
+                `$${tipInput ? parseFloat(tipInput).toFixed(2) : "0.00"} fixed amount`}
             </div>
           </div>
         )}
@@ -406,7 +455,9 @@ export default function TaxTipSettings({
           <div className="mt-3 pt-2 border-t border-gray-200">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Tip total:</span>
-              <span className="font-medium">${(tipPreview / 100).toFixed(2)}</span>
+              <span className="font-medium">
+                ${(tipPreview / 100).toFixed(2)}
+              </span>
             </div>
           </div>
         )}
@@ -418,7 +469,11 @@ export default function TaxTipSettings({
           <div className="flex justify-between items-center">
             <span className="font-semibold text-gray-800">Group Total</span>
             <span className="text-xl font-bold text-blue-600">
-              ${((groupSubtotal + totalFees + currentGratuity + tipPreview) / 100).toFixed(2)}
+              $
+              {(
+                (groupSubtotal + totalFees + currentGratuity + tipPreview) /
+                100
+              ).toFixed(2)}
             </span>
           </div>
           <div className="mt-1.5 text-sm text-gray-600 space-y-1">

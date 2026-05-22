@@ -13,7 +13,10 @@ export default function ReceiptImageViewer({
   storageId,
   onClose,
 }: ReceiptImageViewerProps) {
-  const imageUrl = useQuery(api.receipts.getReceiptUrl, { sessionId, storageId });
+  const imageUrl = useQuery(api.receipts.getReceiptUrl, {
+    sessionId,
+    storageId,
+  });
 
   // Handle click on overlay (close modal)
   function handleOverlayClick(e: React.MouseEvent) {

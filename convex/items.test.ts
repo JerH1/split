@@ -84,7 +84,7 @@ describe("items authorization", () => {
           participantId: otherParticipantId,
           name: "Burger",
           price: 1500,
-        })
+        }),
       ).rejects.toThrow("Not authorized to add items to this session");
     });
 
@@ -129,7 +129,7 @@ describe("items authorization", () => {
           participantId: otherParticipantId,
           name: "Burger",
           price: 1500,
-        })
+        }),
       ).rejects.toThrow("Not authorized to add items to this session");
     });
   });
@@ -139,26 +139,28 @@ describe("items authorization", () => {
       const t = convexTest(schema);
 
       // Setup: Create session with host and an item
-      const { sessionId, hostParticipantId, itemId } = await t.run(async (ctx) => {
-        const sessionId = await ctx.db.insert("sessions", {
-          code: "ABC123",
-          hostName: "Host",
-          createdAt: Date.now(),
-        });
-        const hostParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Host",
-          isHost: true,
-          joinedAt: Date.now(),
-        });
-        const itemId = await ctx.db.insert("items", {
-          sessionId,
-          name: "Burger",
-          price: 1500,
-          quantity: 1,
-        });
-        return { sessionId, hostParticipantId, itemId };
-      });
+      const { sessionId, hostParticipantId, itemId } = await t.run(
+        async (ctx) => {
+          const sessionId = await ctx.db.insert("sessions", {
+            code: "ABC123",
+            hostName: "Host",
+            createdAt: Date.now(),
+          });
+          const hostParticipantId = await ctx.db.insert("participants", {
+            sessionId,
+            name: "Host",
+            isHost: true,
+            joinedAt: Date.now(),
+          });
+          const itemId = await ctx.db.insert("items", {
+            sessionId,
+            name: "Burger",
+            price: 1500,
+            quantity: 1,
+          });
+          return { sessionId, hostParticipantId, itemId };
+        },
+      );
 
       // Action: Host removes item
       await t.mutation(api.items.remove, {
@@ -175,37 +177,39 @@ describe("items authorization", () => {
       const t = convexTest(schema);
 
       // Setup: Create session with host, item, and claims
-      const { sessionId, hostParticipantId, itemId, claimId } = await t.run(async (ctx) => {
-        const sessionId = await ctx.db.insert("sessions", {
-          code: "ABC123",
-          hostName: "Host",
-          createdAt: Date.now(),
-        });
-        const hostParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Host",
-          isHost: true,
-          joinedAt: Date.now(),
-        });
-        const guestParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Guest",
-          isHost: false,
-          joinedAt: Date.now(),
-        });
-        const itemId = await ctx.db.insert("items", {
-          sessionId,
-          name: "Burger",
-          price: 1500,
-          quantity: 1,
-        });
-        const claimId = await ctx.db.insert("claims", {
-          sessionId,
-          itemId,
-          participantId: guestParticipantId,
-        });
-        return { sessionId, hostParticipantId, itemId, claimId };
-      });
+      const { sessionId, hostParticipantId, itemId, claimId } = await t.run(
+        async (ctx) => {
+          const sessionId = await ctx.db.insert("sessions", {
+            code: "ABC123",
+            hostName: "Host",
+            createdAt: Date.now(),
+          });
+          const hostParticipantId = await ctx.db.insert("participants", {
+            sessionId,
+            name: "Host",
+            isHost: true,
+            joinedAt: Date.now(),
+          });
+          const guestParticipantId = await ctx.db.insert("participants", {
+            sessionId,
+            name: "Guest",
+            isHost: false,
+            joinedAt: Date.now(),
+          });
+          const itemId = await ctx.db.insert("items", {
+            sessionId,
+            name: "Burger",
+            price: 1500,
+            quantity: 1,
+          });
+          const claimId = await ctx.db.insert("claims", {
+            sessionId,
+            itemId,
+            participantId: guestParticipantId,
+          });
+          return { sessionId, hostParticipantId, itemId, claimId };
+        },
+      );
 
       // Action: Host removes item
       await t.mutation(api.items.remove, {
@@ -224,39 +228,41 @@ describe("items authorization", () => {
       const t = convexTest(schema);
 
       // Setup: Create session with host, non-host, and item
-      const { sessionId, nonHostParticipantId, itemId } = await t.run(async (ctx) => {
-        const sessionId = await ctx.db.insert("sessions", {
-          code: "ABC123",
-          hostName: "Host",
-          createdAt: Date.now(),
-        });
-        await ctx.db.insert("participants", {
-          sessionId,
-          name: "Host",
-          isHost: true,
-          joinedAt: Date.now(),
-        });
-        const nonHostParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Guest",
-          isHost: false,
-          joinedAt: Date.now(),
-        });
-        const itemId = await ctx.db.insert("items", {
-          sessionId,
-          name: "Burger",
-          price: 1500,
-          quantity: 1,
-        });
-        return { sessionId, nonHostParticipantId, itemId };
-      });
+      const { sessionId, nonHostParticipantId, itemId } = await t.run(
+        async (ctx) => {
+          const sessionId = await ctx.db.insert("sessions", {
+            code: "ABC123",
+            hostName: "Host",
+            createdAt: Date.now(),
+          });
+          await ctx.db.insert("participants", {
+            sessionId,
+            name: "Host",
+            isHost: true,
+            joinedAt: Date.now(),
+          });
+          const nonHostParticipantId = await ctx.db.insert("participants", {
+            sessionId,
+            name: "Guest",
+            isHost: false,
+            joinedAt: Date.now(),
+          });
+          const itemId = await ctx.db.insert("items", {
+            sessionId,
+            name: "Burger",
+            price: 1500,
+            quantity: 1,
+          });
+          return { sessionId, nonHostParticipantId, itemId };
+        },
+      );
 
       // Action & Verify: Non-host cannot remove item
       await expect(
         t.mutation(api.items.remove, {
           itemId,
           participantId: nonHostParticipantId,
-        })
+        }),
       ).rejects.toThrow("Only the host can remove items");
     });
 
@@ -305,7 +311,7 @@ describe("items authorization", () => {
         t.mutation(api.items.remove, {
           itemId,
           participantId: otherHostId,
-        })
+        }),
       ).rejects.toThrow("Participant not in this session");
     });
   });
@@ -350,7 +356,11 @@ describe("items authorization", () => {
           .collect();
       });
       expect(items).toHaveLength(3);
-      expect(items.map((i) => i.name).sort()).toEqual(["Burger", "Drink", "Fries"]);
+      expect(items.map((i) => i.name).sort()).toEqual([
+        "Burger",
+        "Drink",
+        "Fries",
+      ]);
     });
 
     it("rejects non-host bulk adding (BTEST-06)", async () => {
@@ -383,10 +393,8 @@ describe("items authorization", () => {
         t.mutation(api.items.addBulk, {
           sessionId,
           participantId: nonHostParticipantId,
-          items: [
-            { name: "Burger", price: 1500 },
-          ],
-        })
+          items: [{ name: "Burger", price: 1500 }],
+        }),
       ).rejects.toThrow("Only the host can replace all items");
     });
 
@@ -429,10 +437,8 @@ describe("items authorization", () => {
         t.mutation(api.items.addBulk, {
           sessionId,
           participantId: otherHostId,
-          items: [
-            { name: "Burger", price: 1500 },
-          ],
-        })
+          items: [{ name: "Burger", price: 1500 }],
+        }),
       ).rejects.toThrow("Participant not in this session");
     });
 
@@ -440,26 +446,28 @@ describe("items authorization", () => {
       const t = convexTest(schema);
 
       // Setup: Create session with host and existing items
-      const { sessionId, hostParticipantId, existingItemId } = await t.run(async (ctx) => {
-        const sessionId = await ctx.db.insert("sessions", {
-          code: "ABC123",
-          hostName: "Host",
-          createdAt: Date.now(),
-        });
-        const hostParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Host",
-          isHost: true,
-          joinedAt: Date.now(),
-        });
-        const existingItemId = await ctx.db.insert("items", {
-          sessionId,
-          name: "OldItem",
-          price: 999,
-          quantity: 1,
-        });
-        return { sessionId, hostParticipantId, existingItemId };
-      });
+      const { sessionId, hostParticipantId, existingItemId } = await t.run(
+        async (ctx) => {
+          const sessionId = await ctx.db.insert("sessions", {
+            code: "ABC123",
+            hostName: "Host",
+            createdAt: Date.now(),
+          });
+          const hostParticipantId = await ctx.db.insert("participants", {
+            sessionId,
+            name: "Host",
+            isHost: true,
+            joinedAt: Date.now(),
+          });
+          const existingItemId = await ctx.db.insert("items", {
+            sessionId,
+            name: "OldItem",
+            price: 999,
+            quantity: 1,
+          });
+          return { sessionId, hostParticipantId, existingItemId };
+        },
+      );
 
       // Action: Host bulk adds new items (should replace existing)
       await t.mutation(api.items.addBulk, {

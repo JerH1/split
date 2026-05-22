@@ -8,10 +8,13 @@ interface SummaryProps {
   currentParticipantId: Id<"participants"> | null;
 }
 
-export default function Summary({ sessionId, currentParticipantId }: SummaryProps) {
+export default function Summary({
+  sessionId,
+  currentParticipantId,
+}: SummaryProps) {
   const totals = useQuery(api.participants.getTotals, { sessionId });
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(
-    null
+    null,
   );
 
   if (!totals) {
@@ -23,14 +26,15 @@ export default function Summary({ sessionId, currentParticipantId }: SummaryProp
     );
   }
 
-  const { participants, unclaimedItems, unclaimedTotal, groupSubtotal } = totals;
+  const { participants, unclaimedItems, unclaimedTotal, groupSubtotal } =
+    totals;
 
   // Calculate group total
   const groupTotal = participants.reduce((sum, p) => sum + p.total, 0);
 
   function toggleExpand(participantId: string) {
     setExpandedParticipant((prev) =>
-      prev === participantId ? null : participantId
+      prev === participantId ? null : participantId,
     );
   }
 
@@ -64,7 +68,8 @@ export default function Summary({ sessionId, currentParticipantId }: SummaryProp
       {/* Participant Cards */}
       <div className="space-y-3">
         {participants.map((participant) => {
-          const isCurrentUser = participant.participantId === currentParticipantId;
+          const isCurrentUser =
+            participant.participantId === currentParticipantId;
           const isExpanded = expandedParticipant === participant.participantId;
 
           return (
@@ -123,7 +128,9 @@ export default function Summary({ sessionId, currentParticipantId }: SummaryProp
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600">
                   <span>Items ${(participant.subtotal / 100).toFixed(2)}</span>
                   <span className="text-gray-300">|</span>
-                  <span>Taxes & Fees ${(participant.tax / 100).toFixed(2)}</span>
+                  <span>
+                    Taxes & Fees ${(participant.tax / 100).toFixed(2)}
+                  </span>
                   <span className="text-gray-300">|</span>
                   <span>Tip ${(participant.tip / 100).toFixed(2)}</span>
                 </div>

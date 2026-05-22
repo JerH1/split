@@ -37,7 +37,9 @@ export const join = mutation({
     // Verify session exists
     const session = await ctx.db.get(args.sessionId);
     if (!session) {
-      throw new Error("Session not found. Please check the code and try again.");
+      throw new Error(
+        "Session not found. Please check the code and try again.",
+      );
     }
 
     // Validate and trim name
@@ -51,11 +53,13 @@ export const join = mutation({
 
     const nameLower = validatedName.toLowerCase();
     const duplicate = existingParticipants.find(
-      (p) => p.name.toLowerCase() === nameLower
+      (p) => p.name.toLowerCase() === nameLower,
     );
 
     if (duplicate) {
-      throw new Error("That name is already taken. Please choose a different name.");
+      throw new Error(
+        "That name is already taken. Please choose a different name.",
+      );
     }
 
     const participantId = await ctx.db.insert("participants", {
@@ -107,12 +111,14 @@ export const updateName = mutation({
     // Check for duplicate names (case-insensitive)
     const existingParticipants = await ctx.db
       .query("participants")
-      .withIndex("by_session", (q) => q.eq("sessionId", targetParticipant.sessionId))
+      .withIndex("by_session", (q) =>
+        q.eq("sessionId", targetParticipant.sessionId),
+      )
       .collect();
 
     const nameLower = validatedName.toLowerCase();
     const duplicate = existingParticipants.find(
-      (p) => p.name.toLowerCase() === nameLower && p._id !== args.participantId
+      (p) => p.name.toLowerCase() === nameLower && p._id !== args.participantId,
     );
 
     if (duplicate) {
@@ -177,7 +183,11 @@ export const getTotals = query({
     }
 
     // Track unclaimed items
-    const unclaimedItems: { itemId: Id<"items">; itemName: string; price: number }[] = [];
+    const unclaimedItems: {
+      itemId: Id<"items">;
+      itemName: string;
+      price: number;
+    }[] = [];
     let groupSubtotal = 0;
 
     // Process each item
@@ -247,7 +257,7 @@ export const getTotals = query({
     // Use TOTAL bill subtotal (all items) as denominator, not just claimed items
     // This ensures fees are proportional to participant's share of the ENTIRE bill
     const participantSubtotals = participants.map(
-      (p) => participantData.get(p._id)?.subtotal ?? 0
+      (p) => participantData.get(p._id)?.subtotal ?? 0,
     );
 
     // Calculate total bill subtotal (all items, claimed or not)
@@ -285,18 +295,20 @@ export const getTotals = query({
           groupSubtotal,
           totalFees,
           tipType,
-          tipValue
+          tipValue,
         );
       });
     }
 
     // 7. Build results sorted by joinedAt (host first)
     const sortedParticipants = [...participants].sort(
-      (a, b) => a.joinedAt - b.joinedAt
+      (a, b) => a.joinedAt - b.joinedAt,
     );
 
     const results = sortedParticipants.map((participant) => {
-      const originalIndex = participants.findIndex((p) => p._id === participant._id);
+      const originalIndex = participants.findIndex(
+        (p) => p._id === participant._id,
+      );
       const data = participantData.get(participant._id) || {
         subtotal: 0,
         claimedItems: [],
@@ -316,7 +328,10 @@ export const getTotals = query({
       };
     });
 
-    const unclaimedTotal = unclaimedItems.reduce((sum, item) => sum + item.price, 0);
+    const unclaimedTotal = unclaimedItems.reduce(
+      (sum, item) => sum + item.price,
+      0,
+    );
 
     return {
       participants: results,

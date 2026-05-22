@@ -26,6 +26,7 @@ sessions
 ```
 
 **Key relationships:**
+
 - A session has many participants and items
 - Claims are a many-to-many join between participants and items
 - All tables include denormalized `sessionId` for efficient session-scoped queries
@@ -130,16 +131,16 @@ See `.planning/phases/11-security-review/SECURITY-AUDIT.md` for the full securit
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `convex/schema.ts` | Data model definition |
-| `convex/calculations.ts` | Tax/tip distribution logic |
-| `convex/validation.ts` | Input validation helpers |
-| `convex/claims.ts` | Claim/unclaim mutations |
-| `convex/sessions.ts` | Session CRUD and code generation |
-| `src/components/Summary.tsx` | Per-person total breakdown |
-| `src/components/ClaimableItem.tsx` | Item claiming UI |
-| `src/components/InlineItem.tsx` | Inline item editing |
+| File                               | Purpose                          |
+| ---------------------------------- | -------------------------------- |
+| `convex/schema.ts`                 | Data model definition            |
+| `convex/calculations.ts`           | Tax/tip distribution logic       |
+| `convex/validation.ts`             | Input validation helpers         |
+| `convex/claims.ts`                 | Claim/unclaim mutations          |
+| `convex/sessions.ts`               | Session CRUD and code generation |
+| `src/components/Summary.tsx`       | Per-person total breakdown       |
+| `src/components/ClaimableItem.tsx` | Item claiming UI                 |
+| `src/components/InlineItem.tsx`    | Inline item editing              |
 
 ## Design Decisions
 
