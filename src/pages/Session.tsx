@@ -12,6 +12,7 @@ import TabNavigation from "../components/TabNavigation";
 import Summary from "../components/Summary";
 import TaxTipSettings from "../components/TaxTipSettings";
 import { getStoredParticipant } from "../lib/sessionStorage";
+import { updateMerchantNameInBillHistory } from "../lib/billHistory";
 
 // Map rejection reasons to user-friendly error messages
 const REJECTION_MESSAGES: Record<string, { title: string; hint: string }> = {
@@ -134,6 +135,7 @@ export default function Session() {
   const addBulkFees = useMutation(api.fees.addBulk);
   const updateTip = useMutation(api.sessions.updateTip);
   const addItem = useMutation(api.items.add);
+  const updateMerchant = useMutation(api.sessions.updateMerchant);
 
   // Draft item state - local only until saved
   const [draftItem, setDraftItem] = useState<{
@@ -240,6 +242,17 @@ export default function Session() {
         items: itemsInCents,
         participantId: currentParticipantId,
       });
+
+      if (result.merchant) {
+        await updateMerchant({
+          sessionId: session._id,
+          participantId: currentParticipantId,
+          merchant: result.merchant,
+        });
+        if (code) {
+          updateMerchantNameInBillHistory(code, result.merchant);
+        }
+      }
 
       // Add fees from receipt (convert to cents)
       if (result.fees && result.fees.length > 0) {
@@ -555,9 +568,14 @@ export default function Session() {
 
             {/* Items list */}
             <div className="mb-3">
-              <h2 className="text-lg font-semibold mb-2">
-                Items {items && items.length > 0 ? `(${items.length})` : ""}
-              </h2>
+              <div className="flex flex-row justify-between">
+                <h2 className="text-lg font-semibold mb-2">
+                  Items {items && items.length > 0 ? `(${items.length})` : ""}
+                </h2>
+                <div className="text-sm text-gray-400 pt-1">
+                  {session.merchant ? session.merchant : null}
+                </div>
+              </div>
               <div className="space-y-1">
                 {items?.map((item) => (
                   <ClaimableItem

@@ -11,7 +11,7 @@ export interface BillHistoryEntry {
   createdAt: number; // Unix timestamp
   participantName: string; // User's name in this bill
   participantId: string; // For session persistence check
-  merchantName?: string; // From receipt if available
+  merchant?: string; // From receipt if available
   total?: number; // Final total in cents (if known)
 }
 
@@ -76,6 +76,25 @@ export function updateBillTotal(code: string, total: number): void {
     }
   } catch {
     // Silently fail
+  }
+}
+
+/**
+ * Update the merchant name for a bill in history.
+ */
+export function updateMerchantNameInBillHistory(
+  code: string,
+  merchant: string,
+): void {
+  try {
+    const entries = getBillHistory();
+    const entry = entries.find((e) => e.code === code);
+    if (entry) {
+      entry.merchant = merchant;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    }
+  } catch {
+    // Silently fail :-(
   }
 }
 
