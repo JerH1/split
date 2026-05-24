@@ -8,8 +8,6 @@ import JoinToast from "../components/JoinToast";
 import TabNavigation from "../components/TabNavigation";
 import { getStoredParticipant } from "../lib/sessionStorage";
 
-type Tab = "items" | "taxtip" | "summary";
-
 export default function Session() {
   const { code } = useParams<{ code: string }>();
   const [activeTab, setActiveTab] = useState<Tab>("items");

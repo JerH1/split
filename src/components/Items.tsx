@@ -43,7 +43,6 @@ export default function Items () {
     participants,
     items,
     session,
-    draftItem,
     claims,
     currentParticipantId,
     isHost,

@@ -3,7 +3,6 @@ import { useLocation, NavLink } from "react-router";
 type Tab = "items" | "taxtip" | "summary";
 
 interface TabNavigationProps {
-  activeTab: Tab;
   onTabChange: (tab: Tab) => void;
   unclaimedCount?: number;
 }
@@ -64,7 +63,6 @@ function UsersIcon({ className }: { className?: string }) {
 }
 
 export default function TabNavigation({
-  activeTab,
   onTabChange,
   unclaimedCount = 0,
 }: TabNavigationProps) {
