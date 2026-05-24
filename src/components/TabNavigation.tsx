@@ -3,7 +3,6 @@ import { useLocation, NavLink } from "react-router";
 type Tab = "items" | "taxtip" | "summary";
 
 interface TabNavigationProps {
-  onTabChange: (tab: Tab) => void;
   unclaimedCount?: number;
 }
 
@@ -63,7 +62,6 @@ function UsersIcon({ className }: { className?: string }) {
 }
 
 export default function TabNavigation({
-  onTabChange,
   unclaimedCount = 0,
 }: TabNavigationProps) {
   const tabs: { id: Tab; label: string; Icon: typeof ListIcon }[] = [
@@ -82,7 +80,6 @@ export default function TabNavigation({
             <NavLink
               to={id}
               key={id}
-              onClick={() => onTabChange(id, location)}
               className={({ isActive }) => {
                 const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors`
                 return isActive ?

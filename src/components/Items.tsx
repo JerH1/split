@@ -2,10 +2,12 @@ import { useState } from "react";
 import { useOutletContext } from "react-router";
 import { useAction, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { Id } from "../../convex/_generated/dataModel";
 import ReceiptCapture from "../components/ReceiptCapture";
 import ClaimableItem from "../components/ClaimableItem";
 import ReceiptImageViewer from "../components/ReceiptImageViewer";
 import { updateMerchantNameInBillHistory } from "../lib/billHistory";
+import { Context } from "../pages/Session";
 
 // Receipt processing state machine
 type ReceiptState =
@@ -38,7 +40,7 @@ const REJECTION_MESSAGES: Record<string, { title: string; hint: string }> = {
 };
 
 export default function Items () {
-  const context = useOutletContext();
+  const context: Context = useOutletContext();
   const {
     participants,
     items,
@@ -124,8 +126,8 @@ export default function Items () {
           participantId: currentParticipantId,
           merchant: result.merchant,
         });
-        if (code) {
-          updateMerchantNameInBillHistory(code, result.merchant);
+        if (session.code) {
+          updateMerchantNameInBillHistory(session.code, result.merchant);
         }
       }
 
@@ -200,8 +202,7 @@ export default function Items () {
   }
 
   return (
-    <div className="p-4">
-      {/* Items Tab */}
+    <div className="p-4 space-y-4">
       <div>
         {/* Who's Here section */}
         {participants && participants.length > 0 && (
