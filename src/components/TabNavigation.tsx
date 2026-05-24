@@ -1,4 +1,4 @@
-import { useLocation, NavLink } from "react-router";
+import { NavLink } from "react-router";
 
 type Tab = "items" | "taxtip" | "summary";
 
@@ -69,13 +69,11 @@ export default function TabNavigation({
     { id: "taxtip", label: "Tax & Tip", Icon: CalculatorIcon },
     { id: "summary", label: "Totals", Icon: UsersIcon },
   ];
-  const location = useLocation();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
       <div className="max-w-md mx-auto flex">
         {tabs.map(({ id, label, Icon }) => {
-          const isActive = location.pathname.endsWith(id);
           return (
             <NavLink
               to={id}
@@ -87,17 +85,21 @@ export default function TabNavigation({
                   baseClasses + " text-gray-500"
               }}
             >
-              <div className="relative">
-                <Icon className="w-6 h-6" />
-                {id === "items" && unclaimedCount > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-medium rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {unclaimedCount}
+              {({ isActive }) => (
+                <>
+                  <div className="relative">
+                    <Icon className="w-6 h-6" />
+                    {id === "items" && unclaimedCount > 0 && (
+                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-medium rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                        {unclaimedCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-xs mt-1 ${isActive ? "font-medium" : ""}`}>
+                    {label}
                   </span>
-                )}
-              </div>
-              <span className={`text-xs mt-1 ${isActive ? "font-medium" : ""}`}>
-                {label}
-              </span>
+                </>
+              )}
             </NavLink>
           );
         })}
