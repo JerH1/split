@@ -1,59 +1,18 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useParams, Link, Route, Outlet, useLocation } from "react-router";
-import { useQuery, useAction, useMutation } from "convex/react";
+import { useParams, Link, Outlet } from "react-router";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
-import ReceiptImageViewer from "../components/ReceiptImageViewer";
-import ClaimableItem from "../components/ClaimableItem";
 import JoinGate from "../components/JoinGate";
 import JoinToast from "../components/JoinToast";
 import TabNavigation from "../components/TabNavigation";
-import Items from "../components/Items";
-import Summary from "../components/Summary";
-import TaxTipSettings from "../components/TaxTipSettings";
 import { getStoredParticipant } from "../lib/sessionStorage";
-import { updateMerchantNameInBillHistory } from "../lib/billHistory";
-
-// Map rejection reasons to user-friendly error messages
-const REJECTION_MESSAGES: Record<string, { title: string; hint: string }> = {
-  landscape_photo: {
-    title: "This doesn't look like a receipt",
-    hint: "Try taking a photo of your receipt instead",
-  },
-  document: {
-    title: "This looks like a document, not a receipt",
-    hint: "Make sure you're photographing a store receipt",
-  },
-  blurry: {
-    title: "The image is too blurry",
-    hint: "Try taking another photo with better lighting",
-  },
-  other: {
-    title: "We couldn't recognize this as a receipt",
-    hint: "Try taking a clearer photo of your receipt",
-  },
-};
-
-// Confidence threshold for handwritten tip pre-fill (higher than receipt validation)
-const HANDWRITTEN_TIP_CONFIDENCE_THRESHOLD = 0.8;
-
-// Receipt processing state machine
-type ReceiptState =
-  | { step: "idle" }
-  | { step: "uploading" }
-  | { step: "processing"; storageId: Id<"_storage"> }
-  | { step: "error"; message: string };
 
 type Tab = "items" | "taxtip" | "summary";
 
 export default function Session() {
   const { code } = useParams<{ code: string }>();
-  const [receiptState, setReceiptState] = useState<ReceiptState>({
-    step: "idle",
-  });
   const [activeTab, setActiveTab] = useState<Tab>("items");
-
-  const [showReceiptImage, setShowReceiptImage] = useState(false);
 
   // State to track participant ID after just joining (before localStorage is read again)
   const [justJoinedParticipantId, setJustJoinedParticipantId] =
@@ -130,21 +89,6 @@ export default function Session() {
     return [];
   }, [fees, session?.tax]);
 
-  // Parse receipt action and mutations for saving items directly
-  const parseReceipt = useAction(api.actions.parseReceipt.parseReceipt);
-  const addBulk = useMutation(api.items.addBulk);
-  const addBulkFees = useMutation(api.fees.addBulk);
-  const updateTip = useMutation(api.sessions.updateTip);
-  const addItem = useMutation(api.items.add);
-  const updateMerchant = useMutation(api.sessions.updateMerchant);
-
-  // Draft item state - local only until saved
-  const [draftItem, setDraftItem] = useState<{
-    name: string;
-    price: number;
-    quantity: number;
-  } | null>(null);
-
   // Copy code state
   const [copied, setCopied] = useState(false);
 
@@ -195,110 +139,6 @@ export default function Session() {
     // Update ref for next comparison
     previousParticipantIdsRef.current = currentIds;
   }, [participants]);
-
-  // Handle receipt upload - triggers OCR processing and saves items directly
-  async function handleReceiptUpload(storageId: Id<"_storage">) {
-    if (!session) return;
-    setReceiptState({ step: "processing", storageId });
-
-    try {
-      const result = await parseReceipt({ storageId });
-
-      if ("error" in result) {
-        // Check for validation rejection (non-receipt)
-        if ("rejection_reason" in result && result.rejection_reason) {
-          const msg =
-            REJECTION_MESSAGES[result.rejection_reason] ||
-            REJECTION_MESSAGES.other;
-          setReceiptState({
-            step: "error",
-            message: `${msg.title}\n\n${msg.hint}`,
-          });
-          return;
-        }
-        // Existing parse error handling
-        const rawPreview =
-          "raw" in result && result.raw
-            ? `\n\nRaw response: ${result.raw.slice(0, 500)}`
-            : "";
-        setReceiptState({
-          step: "error",
-          message: `OCR failed: ${result.error}.${rawPreview}`,
-        });
-        return;
-      }
-
-      // Convert prices from dollars to cents and save items directly
-      const itemsInCents = result.items.map((item) => ({
-        name: item.name,
-        price: Math.round(item.price * 100),
-        quantity: item.quantity,
-      }));
-
-      if (!currentParticipantId) {
-        throw new Error("Must be joined to upload receipt");
-      }
-      await addBulk({
-        sessionId: session._id,
-        items: itemsInCents,
-        participantId: currentParticipantId,
-      });
-
-      if (result.merchant) {
-        await updateMerchant({
-          sessionId: session._id,
-          participantId: currentParticipantId,
-          merchant: result.merchant,
-        });
-        if (code) {
-          updateMerchantNameInBillHistory(code, result.merchant);
-        }
-      }
-
-      // Add fees from receipt (convert to cents)
-      if (result.fees && result.fees.length > 0) {
-        const feesInCents = result.fees.map((fee) => ({
-          label: fee.label,
-          amount: Math.round(fee.amount * 100),
-        }));
-        await addBulkFees({
-          sessionId: session._id,
-          participantId: currentParticipantId,
-          fees: feesInCents,
-        });
-      }
-
-      // Pre-fill tip from handwritten detection (silent - no toast per user decision)
-      if (
-        "handwritten_tip" in result &&
-        result.handwritten_tip?.detected &&
-        result.handwritten_tip.amount !== null &&
-        result.handwritten_tip.confidence >=
-          HANDWRITTEN_TIP_CONFIDENCE_THRESHOLD
-      ) {
-        await updateTip({
-          sessionId: session._id,
-          tipType: "manual",
-          tipValue: Math.round(result.handwritten_tip.amount * 100), // convert dollars to cents
-          participantId: currentParticipantId,
-        });
-      }
-
-      // Reset to idle - items are now visible via real-time query
-      setReceiptState({ step: "idle" });
-    } catch (error) {
-      setReceiptState({
-        step: "error",
-        message:
-          error instanceof Error ? error.message : "Unknown error occurred",
-      });
-    }
-  }
-
-  // Handle retry after error
-  function handleRetry() {
-    setReceiptState({ step: "idle" });
-  }
 
   // Loading state
   if (session === undefined) {
@@ -367,31 +207,6 @@ export default function Session() {
     }
   }
 
-  // Draft item handlers
-  async function handleDraftSave(
-    name: string,
-    price: number,
-    quantity: number,
-  ) {
-    if (!session || !currentParticipantId) return;
-    await addItem({
-      sessionId: session._id,
-      participantId: currentParticipantId,
-      name,
-      price,
-      quantity,
-    });
-    setDraftItem(null);
-  }
-
-  function handleDraftCancel() {
-    setDraftItem(null);
-  }
-
-  function handleDraftChange(name: string, price: number, quantity: number) {
-    setDraftItem({ name, price, quantity });
-  }
-
   return (
     <div className="max-w-md mx-auto pb-20">
       {/* Join notifications */}
@@ -447,14 +262,9 @@ export default function Session() {
         <Outlet
           context={
             {
-              activeTab,
               participants,
-              receiptState,
-              handleReceiptUpload,
-              handleRetry,
               items,
               session,
-              draftItem,
               claims,
               currentParticipantId,
               isHost,
@@ -472,15 +282,6 @@ export default function Session() {
         onTabChange={setActiveTab}
         unclaimedCount={unclaimedCount}
       />
-
-      {/* Receipt Image Viewer Modal */}
-      {session.receiptImageId && showReceiptImage && (
-        <ReceiptImageViewer
-          sessionId={session._id}
-          storageId={session.receiptImageId}
-          onClose={() => setShowReceiptImage(false)}
-        />
-      )}
     </div>
   );
 }

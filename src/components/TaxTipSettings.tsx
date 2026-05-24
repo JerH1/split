@@ -35,9 +35,7 @@ interface FeeEditState {
 export default function TaxTipSettings() {
   const context = useOutletContext();
   const {
-    activeTab,
     participants,
-    receiptState,
     handleReceiptUpload,
     handleRetry,
     items,
