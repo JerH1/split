@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useParams, Link, Route, Outlet, useLocation } from "react-router";
-import { useQuery, useAction, useMutation } from "convex/react";
+import { useParams, Link, Outlet } from "react-router";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import JoinGate from "../components/JoinGate";
@@ -253,7 +253,7 @@ export default function Session() {
         </button>
 
         {/* Spacer to balance back button width */}
-        <div className="w-[72px] shrink-0" />
+        <div className="w-18 shrink-0" />
       </div>
 
       <div>
