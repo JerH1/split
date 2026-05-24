@@ -14,13 +14,8 @@ interface FeeEditState {
 
 export default function TaxTipSettings() {
   const context: Context = useOutletContext();
-  const {
-    session,
-    currentParticipantId,
-    isHost,
-    groupSubtotal,
-    fees
-  } = context;
+  const { session, currentParticipantId, isHost, groupSubtotal, fees } =
+    context;
 
   // Local state for fee editing - keyed by fee ID
   const [feeInputs, setFeeInputs] = useState<Map<string, FeeEditState>>(
@@ -151,14 +146,14 @@ export default function TaxTipSettings() {
       await updateFee({
         feeId,
         participantId: currentParticipantId,
-        label: input.label
+        label: input.label,
       });
     } else {
       const amountInCents = Math.round(parseFloat(input.amount) * 100) || 0;
       await updateFee({
         feeId,
         participantId: currentParticipantId,
-        amount: amountInCents
+        amount: amountInCents,
       });
     }
   }
@@ -178,7 +173,7 @@ export default function TaxTipSettings() {
     if (!currentParticipantId) return;
     await removeFee({
       feeId,
-      participantId: currentParticipantId
+      participantId: currentParticipantId,
     });
   }
 

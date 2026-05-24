@@ -284,26 +284,21 @@ export default function Session() {
 
       <div>
         <Outlet
-          context={
-            {
-              participants,
-              items,
-              session,
-              claims,
-              currentParticipantId,
-              isHost,
-              groupSubtotal,
-              fees: displayFees,
-            }
-          }
+          context={{
+            participants,
+            items,
+            session,
+            claims,
+            currentParticipantId,
+            isHost,
+            groupSubtotal,
+            fees: displayFees,
+          }}
         />
-
       </div>
 
       {/* Fixed Bottom Tab Navigation */}
-      <TabNavigation
-        unclaimedCount={unclaimedCount}
-      />
+      <TabNavigation unclaimedCount={unclaimedCount} />
     </div>
   );
 }

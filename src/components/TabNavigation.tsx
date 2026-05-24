@@ -79,10 +79,10 @@ export default function TabNavigation({
               to={id}
               key={id}
               className={({ isActive }) => {
-                const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors`
-                return isActive ?
-                  baseClasses + " text-blue-600" :
-                  baseClasses + " text-gray-500"
+                const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors`;
+                return isActive
+                  ? baseClasses + " text-blue-600"
+                  : baseClasses + " text-gray-500";
               }}
             >
               {({ isActive }) => (
@@ -95,7 +95,9 @@ export default function TabNavigation({
                       </span>
                     )}
                   </div>
-                  <span className={`text-xs mt-1 ${isActive ? "font-medium" : ""}`}>
+                  <span
+                    className={`text-xs mt-1 ${isActive ? "font-medium" : ""}`}
+                  >
                     {label}
                   </span>
                 </>

@@ -12,10 +12,10 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
-          <Route path="bill/:code" element={ <Session /> }>
-            <Route path="items" element={ <Items /> } />
-            <Route path="taxtip" element={ <TaxTipSettings /> } />
-            <Route path="summary" element={ <Summary /> } />
+          <Route path="bill/:code" element={<Session />}>
+            <Route path="items" element={<Items />} />
+            <Route path="taxtip" element={<TaxTipSettings />} />
+            <Route path="summary" element={<Summary />} />
           </Route>
         </Route>
       </Routes>

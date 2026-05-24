@@ -8,7 +8,9 @@ export default function Summary() {
   const context: Context = useOutletContext();
   const { session, currentParticipantId } = context;
 
-  const totals = useQuery(api.participants.getTotals, { sessionId: session._id });
+  const totals = useQuery(api.participants.getTotals, {
+    sessionId: session._id,
+  });
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(
     null,
   );

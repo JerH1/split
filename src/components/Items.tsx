@@ -39,7 +39,7 @@ const REJECTION_MESSAGES: Record<string, { title: string; hint: string }> = {
   },
 };
 
-export default function Items () {
+export default function Items() {
   const context: Context = useOutletContext();
   const {
     participants,
@@ -369,9 +369,7 @@ export default function Items () {
 
           {/* Add item button - available to all participants */}
           <button
-            onClick={() =>
-              setDraftItem({ name: "", price: 0, quantity: 1 })
-            }
+            onClick={() => setDraftItem({ name: "", price: 0, quantity: 1 })}
             disabled={draftItem !== null}
             className={`w-full mt-2 py-3 px-4 border-2 border-dashed rounded-lg transition-colors ${
               draftItem !== null
