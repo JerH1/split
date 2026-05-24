@@ -84,7 +84,7 @@ export default function TabNavigation({
                 const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors`
                 return isActive ?
                   baseClasses + " text-blue-600" :
-                  baseClasses + " text-black-500"
+                  baseClasses + " text-gray-500"
               }}
             >
               <div className="relative">
