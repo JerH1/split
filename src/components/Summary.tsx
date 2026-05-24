@@ -6,8 +6,10 @@ import type { Context } from "../pages/Session";
 
 export default function Summary() {
   const context: Context = useOutletContext();
-  const { currentParticipantId } = context;
-  const totals = useQuery(api.participants.getTotals, { sessionId: context.session._id });
+  const { session, currentParticipantId } = context;
+  const totals = useQuery(api.participants.getTotals, {
+    sessionId: session._id,
+  });
 
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(
     null,
