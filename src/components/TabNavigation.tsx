@@ -1,3 +1,5 @@
+import { useLocation, NavLink } from "react-router";
+
 type Tab = "items" | "taxtip" | "summary";
 
 interface TabNavigationProps {
@@ -71,19 +73,24 @@ export default function TabNavigation({
     { id: "taxtip", label: "Tax & Tip", Icon: CalculatorIcon },
     { id: "summary", label: "Totals", Icon: UsersIcon },
   ];
+  const location = useLocation();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
       <div className="max-w-md mx-auto flex">
         {tabs.map(({ id, label, Icon }) => {
-          const isActive = activeTab === id;
+          const isActive = location.pathname.endsWith(id);
           return (
-            <button
+            <NavLink
+              to={id}
               key={id}
-              onClick={() => onTabChange(id)}
-              className={`flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors ${
-                isActive ? "text-blue-600" : "text-gray-500"
-              }`}
+              onClick={() => onTabChange(id, location)}
+              className={({ isActive }) => {
+                const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors`
+                return isActive ?
+                  baseClasses + " text-blue-600" :
+                  baseClasses + " text-black-500"
+              }}
             >
               <div className="relative">
                 <Icon className="w-6 h-6" />
@@ -96,7 +103,7 @@ export default function TabNavigation({
               <span className={`text-xs mt-1 ${isActive ? "font-medium" : ""}`}>
                 {label}
               </span>
-            </button>
+            </NavLink>
           );
         })}
       </div>

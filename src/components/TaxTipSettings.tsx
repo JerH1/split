@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation } from "convex/react";
+import { useOutletContext } from "react-router";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import { calculateTipShare } from "../../convex/calculations";
@@ -31,13 +32,24 @@ interface FeeEditState {
   amount: string;
 }
 
-export default function TaxTipSettings({
-  session,
-  fees,
-  isHost,
-  groupSubtotal,
-  participantId,
-}: TaxTipSettingsProps) {
+export default function TaxTipSettings() {
+  const context = useOutletContext();
+  const {
+    activeTab,
+    participants,
+    receiptState,
+    handleReceiptUpload,
+    handleRetry,
+    items,
+    session,
+    draftItem,
+    claims,
+    currentParticipantId,
+    isHost,
+    groupSubtotal,
+    fees
+  } = context;
+
   // Local state for fee editing - keyed by fee ID
   const [feeInputs, setFeeInputs] = useState<Map<string, FeeEditState>>(
     new Map(),

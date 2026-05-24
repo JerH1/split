@@ -1,5 +1,8 @@
 import { BrowserRouter, Routes, Route } from "react-router";
 import Layout from "./components/Layout";
+import Items from "./components/Items";
+import TaxTipSettings from "./components/TaxTipSettings";
+import Summary from "./components/Summary";
 import Home from "./pages/Home";
 import Session from "./pages/Session";
 
@@ -9,7 +12,11 @@ function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Home />} />
-          <Route path="bill/:code" element={<Session />} />
+          <Route path="bill/:code" element={ <Session /> }>
+            <Route path="items" element={ <Items /> } />
+            <Route path="taxtip" element={ <TaxTipSettings /> } />
+            <Route path="summary" element={ <Summary /> } />
+          </Route>
         </Route>
       </Routes>
     </BrowserRouter>
