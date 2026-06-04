@@ -35,7 +35,7 @@ export const deleteByCode = mutation({
       .first();
     if (!session) return;
     await ctx.db.delete("sessions", session._id);
-  }
+  },
 });
 
 // Get session by ID

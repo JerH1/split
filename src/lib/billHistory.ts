@@ -103,7 +103,9 @@ export function updateMerchantNameInBillHistory(
  */
 export function clearOneBillFromHistory(sessionCode: string): void {
   if (!sessionCode) {
-    console.debug("You must provide a session code when clearing a bill from local storage.");
+    console.debug(
+      "You must provide a session code when clearing a bill from local storage.",
+    );
     return;
   }
   try {
@@ -113,13 +115,15 @@ export function clearOneBillFromHistory(sessionCode: string): void {
       return;
     }
     const normalizedCode = sessionCode.toUpperCase().trim();
-    const newBillHistory = billHistory.map(bill => {
-      if (bill.code.toUpperCase().trim() !== normalizedCode) {
-        return bill;
-      } else {
-        return null;
-      }
-    }).filter(session => session !== null);
+    const newBillHistory = billHistory
+      .map((bill) => {
+        if (bill.code.toUpperCase().trim() !== normalizedCode) {
+          return bill;
+        } else {
+          return null;
+        }
+      })
+      .filter((session) => session !== null);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newBillHistory));
   } catch {
     // Silently fail
