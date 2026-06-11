@@ -1,18 +1,16 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { useOutletContext } from "react-router";
+import { Context } from "../pages/Session";
 
-interface SummaryProps {
-  sessionId: Id<"sessions">;
-  currentParticipantId: Id<"participants"> | null;
-}
+export default function Summary() {
+  const context: Context = useOutletContext();
+  const { session, currentParticipantId } = context;
 
-export default function Summary({
-  sessionId,
-  currentParticipantId,
-}: SummaryProps) {
-  const totals = useQuery(api.participants.getTotals, { sessionId });
+  const totals = useQuery(api.participants.getTotals, {
+    sessionId: session._id,
+  });
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(
     null,
   );
@@ -39,7 +37,7 @@ export default function Summary({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-4">
       {/* Unclaimed Warning */}
       {unclaimedItems.length > 0 && (
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">

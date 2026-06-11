@@ -1,24 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
+import { Id, Doc } from "../../convex/_generated/dataModel";
+
+type ItemType = Doc<"items">;
+type DraftItemType = Omit<ItemType, "_creationTime">;
 
 interface ClaimableItemProps {
-  item: {
-    _id: Id<"items">;
-    sessionId: Id<"sessions">;
-    name: string;
-    price: number;
-    quantity: number;
-  };
-  claims: Array<{
-    _id: Id<"claims">;
-    participantId: Id<"participants">;
-  }>;
-  participants: Array<{
-    _id: Id<"participants">;
-    name: string;
-  }>;
+  item: ItemType | DraftItemType;
+  claims: Doc<"claims">[];
+  participants: Doc<"participants">[];
   currentParticipantId: Id<"participants"> | null;
   isHost: boolean;
   // Draft mode props - item is local only, not in DB yet

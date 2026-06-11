@@ -1,8 +1,8 @@
+import { NavLink } from "react-router";
+
 type Tab = "items" | "taxtip" | "summary";
 
 interface TabNavigationProps {
-  activeTab: Tab;
-  onTabChange: (tab: Tab) => void;
   unclaimedCount?: number;
 }
 
@@ -62,8 +62,6 @@ function UsersIcon({ className }: { className?: string }) {
 }
 
 export default function TabNavigation({
-  activeTab,
-  onTabChange,
   unclaimedCount = 0,
 }: TabNavigationProps) {
   const tabs: { id: Tab; label: string; Icon: typeof ListIcon }[] = [
@@ -76,27 +74,35 @@ export default function TabNavigation({
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
       <div className="max-w-md mx-auto flex">
         {tabs.map(({ id, label, Icon }) => {
-          const isActive = activeTab === id;
           return (
-            <button
+            <NavLink
+              to={id}
               key={id}
-              onClick={() => onTabChange(id)}
-              className={`flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors ${
-                isActive ? "text-blue-600" : "text-gray-500"
-              }`}
+              className={({ isActive }) => {
+                const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors`;
+                return isActive
+                  ? baseClasses + " text-blue-600"
+                  : baseClasses + " text-gray-500";
+              }}
             >
-              <div className="relative">
-                <Icon className="w-6 h-6" />
-                {id === "items" && unclaimedCount > 0 && (
-                  <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-medium rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
-                    {unclaimedCount}
+              {({ isActive }) => (
+                <>
+                  <div className="relative">
+                    <Icon className="w-6 h-6" />
+                    {id === "items" && unclaimedCount > 0 && (
+                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-medium rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                        {unclaimedCount}
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className={`text-xs mt-1 ${isActive ? "font-medium" : ""}`}
+                  >
+                    {label}
                   </span>
-                )}
-              </div>
-              <span className={`text-xs mt-1 ${isActive ? "font-medium" : ""}`}>
-                {label}
-              </span>
-            </button>
+                </>
+              )}
+            </NavLink>
           );
         })}
       </div>

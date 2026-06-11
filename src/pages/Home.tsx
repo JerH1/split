@@ -80,7 +80,7 @@ export default function Home() {
       storedParticipant.sessionId === joinSession._id
     ) {
       // Participant exists and belongs to this session - auto-redirect
-      navigate(`/bill/${code}`);
+      navigate(`/bill/${code}/items`);
     } else {
       // Participant doesn't exist or belongs to different session - clear storage
       clearParticipant(code);
@@ -129,7 +129,7 @@ export default function Home() {
           participantName: name.trim(),
           participantId,
         });
-        navigate(`/bill/${joinSession.code}`);
+        navigate(`/bill/${joinSession.code}/items`);
       } else {
         // Create new bill
         const { code: newCode, hostParticipantId } = await createSession({
@@ -145,7 +145,7 @@ export default function Home() {
           participantName: name.trim(),
           participantId: hostParticipantId,
         });
-        navigate(`/bill/${newCode}`);
+        navigate(`/bill/${newCode}/items`);
       }
     } catch (err) {
       // Parse Convex error messages to extract user-friendly portion
@@ -288,7 +288,7 @@ export default function Home() {
               {history.map((bill) => (
                 <Link
                   key={bill.code}
-                  to={`/bill/${bill.code}`}
+                  to={`/bill/${bill.code}/items`}
                   className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
                 >
                   <div className="flex justify-between items-center">

@@ -1,29 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useMutation } from "convex/react";
+import { useOutletContext } from "react-router";
 import { api } from "../../convex/_generated/api";
-import { Id } from "../../convex/_generated/dataModel";
 import { calculateTipShare } from "../../convex/calculations";
-
-interface Fee {
-  _id: Id<"fees">;
-  label: string;
-  amount: number;
-}
-
-interface Session {
-  _id: Id<"sessions">;
-  gratuity?: number;
-  tipType?: "percent_subtotal" | "percent_total" | "manual";
-  tipValue?: number;
-}
-
-interface TaxTipSettingsProps {
-  session: Session;
-  fees: Fee[];
-  isHost: boolean;
-  groupSubtotal: number; // in cents
-  participantId: Id<"participants"> | null;
-}
+import { Context } from "../pages/Session";
+import { Id, Doc } from "../../convex/_generated/dataModel";
 
 // Local state for each fee row
 interface FeeEditState {
@@ -31,13 +12,11 @@ interface FeeEditState {
   amount: string;
 }
 
-export default function TaxTipSettings({
-  session,
-  fees,
-  isHost,
-  groupSubtotal,
-  participantId,
-}: TaxTipSettingsProps) {
+export default function TaxTipSettings() {
+  const context: Context = useOutletContext();
+  const { session, currentParticipantId, isHost, groupSubtotal, fees } =
+    context;
+
   // Local state for fee editing - keyed by fee ID
   const [feeInputs, setFeeInputs] = useState<Map<string, FeeEditState>>(
     new Map(),
@@ -121,7 +100,10 @@ export default function TaxTipSettings({
   const updateTip = useMutation(api.sessions.updateTip);
 
   // Calculate total fees for preview
-  const totalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
+  const totalFees = fees.reduce(
+    (sum: number, fee: Doc<"fees">) => sum + fee.amount,
+    0,
+  );
   const currentGratuity = gratuityInput
     ? Math.round(parseFloat(gratuityInput) * 100) || 0
     : 0;
@@ -159,23 +141,31 @@ export default function TaxTipSettings({
   }
 
   async function handleFeeBlur(feeId: Id<"fees">, field: "label" | "amount") {
-    if (!participantId) return;
+    if (!currentParticipantId) return;
     const input = feeInputs.get(feeId);
     if (!input) return;
 
     if (field === "label") {
-      await updateFee({ feeId, participantId, label: input.label });
+      await updateFee({
+        feeId,
+        participantId: currentParticipantId,
+        label: input.label,
+      });
     } else {
       const amountInCents = Math.round(parseFloat(input.amount) * 100) || 0;
-      await updateFee({ feeId, participantId, amount: amountInCents });
+      await updateFee({
+        feeId,
+        participantId: currentParticipantId,
+        amount: amountInCents,
+      });
     }
   }
 
   async function handleAddFee() {
-    if (!participantId) return;
+    if (!currentParticipantId) return;
     const newFeeId = await addFee({
       sessionId: session._id,
-      participantId,
+      participantId: currentParticipantId,
       label: "New fee",
       amount: 0,
     });
@@ -183,15 +173,18 @@ export default function TaxTipSettings({
   }
 
   async function handleRemoveFee(feeId: Id<"fees">) {
-    if (!participantId) return;
-    await removeFee({ feeId, participantId });
+    if (!currentParticipantId) return;
+    await removeFee({
+      feeId,
+      participantId: currentParticipantId,
+    });
   }
 
   // Tip handlers
   async function handleTipTypeChange(
     newType: "percent_subtotal" | "percent_total" | "manual",
   ) {
-    if (!participantId) return;
+    if (!currentParticipantId) return;
     const oldType = tipType;
     setTipType(newType);
 
@@ -204,7 +197,7 @@ export default function TaxTipSettings({
         sessionId: session._id,
         tipType: newType,
         tipValue: 0,
-        participantId,
+        participantId: currentParticipantId,
       });
     } else {
       const currentValue = parseFloat(tipInput) || 0;
@@ -212,13 +205,13 @@ export default function TaxTipSettings({
         sessionId: session._id,
         tipType: newType,
         tipValue: currentValue,
-        participantId,
+        participantId: currentParticipantId,
       });
     }
   }
 
   async function handleTipBlur() {
-    if (!participantId) return;
+    if (!currentParticipantId) return;
     const tipValue =
       tipType === "manual"
         ? Math.round(parseFloat(tipInput) * 100) || 0
@@ -227,12 +220,12 @@ export default function TaxTipSettings({
       sessionId: session._id,
       tipType,
       tipValue,
-      participantId,
+      participantId: currentParticipantId,
     });
   }
 
   return (
-    <div className="space-y-4">
+    <div className="p-4 space-y-4">
       {/* Taxes & Fees Section */}
       <div className="p-4 bg-gray-50 rounded-lg">
         <div className="flex justify-between items-center mb-3">
@@ -244,7 +237,7 @@ export default function TaxTipSettings({
 
         {/* Fee list */}
         <div className="space-y-2">
-          {fees.map((fee) => {
+          {fees.map((fee: Doc<"fees">) => {
             const input = feeInputs.get(fee._id) || {
               label: fee.label,
               amount: (fee.amount / 100).toFixed(2),
