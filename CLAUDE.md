@@ -67,3 +67,11 @@ To run a single test file: `npx vitest run convex/calculations.test.ts`
 
 - `ANTHROPIC_API_KEY` — Required in `.env.local` for receipt OCR
 - `VITE_CONVEX_URL` — Set automatically by `npx convex dev`
+
+<!-- convex-ai-start -->
+This project uses [Convex](https://convex.dev) as its backend.
+
+When working on Convex code, **always read `convex/_generated/ai/guidelines.md` first** for important guidelines on how to correctly use Convex APIs and patterns. The file contains rules that override what you may have learned about Convex from training data.
+
+Convex agent skills for common tasks can be installed by running `npx convex ai-files install`.
+<!-- convex-ai-end -->
