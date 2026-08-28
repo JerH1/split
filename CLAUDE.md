@@ -20,7 +20,17 @@ npm run test:all        # Run unit + E2E tests
 
 # Lint
 npm run lint            # Run ESLint
+
+# Preview link (fork-specific convenience)
+npm run alias           # Point the friendly domain at this branch's newest build
 ```
+
+`npm run alias` waits for the Vercel build to finish, then re-points
+`welcometothefuture.vercel.app` at it. A domain set with `vercel alias set`
+sticks to one deployment, so it needs re-pointing after each push; override the
+target with `ALIAS_DOMAIN=...`. The branch URL Vercel maintains
+(`split-git-<branch>-<team>.vercel.app`) updates on its own and needs none of
+this.
 
 To run a single test file: `npx vitest run convex/calculations.test.ts`
 
