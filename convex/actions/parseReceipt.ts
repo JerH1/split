@@ -227,6 +227,17 @@ export const parseReceipt = action({
     const arrayBuffer = await imageBlob.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");
 
+    // A missing key is a deployment-configuration problem, not something the
+    // photo did wrong. Without this the SDK throws, and the whole Convex stack
+    // trace — @anthropic-ai/sdk internals and all — is what the person holding
+    // the receipt ends up reading.
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return {
+        error: "not_configured",
+        raw: "",
+      };
+    }
+
     // Initialize Anthropic client (API key from environment)
     const anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,

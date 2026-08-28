@@ -109,14 +109,22 @@ export default function Items() {
           });
           return;
         }
-        // Existing parse error handling
-        const rawPreview =
-          "raw" in result && result.raw
-            ? `\n\nRaw response: ${result.raw.slice(0, 500)}`
-            : "";
+        // The backend could not be reached or could not be understood.
+        if (result.error === "not_configured") {
+          setReceiptState({
+            step: "error",
+            message:
+              "Receipt scanning isn't set up\n\nThis deployment has no Anthropic API key. Add the items by hand for now.",
+          });
+          return;
+        }
+        // Keep the detail in the console: it is for whoever is debugging the
+        // deployment, not for whoever is standing at the table.
+        console.error("Receipt parsing failed:", result);
         setReceiptState({
           step: "error",
-          message: `OCR failed: ${result.error}.${rawPreview}`,
+          message:
+            "We couldn't read that receipt\n\nTry another photo, or add the items by hand.",
         });
         return;
       }
@@ -196,10 +204,11 @@ export default function Items() {
       // Reset to idle - items are now visible via real-time query
       setReceiptState({ step: "idle" });
     } catch (error) {
+      console.error("Receipt parsing failed:", error);
       setReceiptState({
         step: "error",
         message:
-          error instanceof Error ? error.message : "Unknown error occurred",
+          "Something went wrong reading that receipt\n\nTry again, or add the items by hand.",
       });
     }
   }
