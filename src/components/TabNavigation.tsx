@@ -1,4 +1,5 @@
 import { NavLink } from "react-router";
+import { useT } from "../lib/i18n/context";
 
 type Tab = "items" | "taxtip" | "summary";
 
@@ -60,15 +61,16 @@ function UsersIcon({ className }: { className?: string }) {
 export default function TabNavigation({
   unclaimedCount = 0,
 }: TabNavigationProps) {
+  const t = useT();
   const tabs: { id: Tab; label: string; Icon: typeof ListIcon }[] = [
-    { id: "items", label: "Items", Icon: ListIcon },
-    { id: "taxtip", label: "Tax & Tip", Icon: CalculatorIcon },
-    { id: "summary", label: "Totals", Icon: UsersIcon },
+    { id: "items", label: t("tabs.items"), Icon: ListIcon },
+    { id: "taxtip", label: t("tabs.taxTip"), Icon: CalculatorIcon },
+    { id: "summary", label: t("tabs.totals"), Icon: UsersIcon },
   ];
 
   return (
     <nav
-      aria-label="Bill sections"
+      aria-label={t("tabs.aria")}
       className="fixed bottom-0 left-0 right-0 border-t-2 border-line bg-surface pb-safe"
     >
       <div className="max-w-md mx-auto flex">
@@ -109,8 +111,7 @@ export default function TabNavigation({
                   </span>
                   {id === "items" && unclaimedCount > 0 && (
                     <span className="sr-only">
-                      , {unclaimedCount} unclaimed{" "}
-                      {unclaimedCount === 1 ? "item" : "items"}
+                      {t("tabs.unclaimedAria", { count: unclaimedCount })}
                     </span>
                   )}
                 </>

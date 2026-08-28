@@ -6,13 +6,17 @@ import { calculateTipShare } from "../../convex/calculations";
 import { Context } from "../pages/Session";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
+import { useT } from "../lib/i18n/context";
+import { MessageKey } from "../lib/i18n/en";
+import { formatMoney } from "../lib/money";
 
-// Tip strategies, as a single-choice radio group
+// Tip strategies, as a single-choice radio group. The label is a key rather
+// than a word so the group re-reads when the language changes.
 const TIP_TYPES = [
-  { value: "percent_subtotal", label: "% on subtotal" },
-  { value: "percent_total", label: "% on subtotal + tax" },
-  { value: "manual", label: "Manual amount" },
-] as const;
+  { value: "percent_subtotal", label: "tip.percentSubtotal" },
+  { value: "percent_total", label: "tip.percentTotal" },
+  { value: "manual", label: "tip.manual" },
+] as const satisfies readonly { value: string; label: MessageKey }[];
 
 // Local state for each fee row
 interface FeeEditState {
@@ -21,11 +25,12 @@ interface FeeEditState {
 }
 
 export default function TaxTipSettings() {
+  const t = useT();
   const context: Context = useOutletContext();
   const { session, currentParticipantId, isHost, groupSubtotal, fees, secret } =
     context;
 
-  useDocumentTitle("Tax & Tip");
+  useDocumentTitle(t("tax.documentTitle"));
 
   // Local state for fee editing - keyed by fee ID
   const [feeInputs, setFeeInputs] = useState<Map<string, FeeEditState>>(
@@ -182,7 +187,7 @@ export default function TaxTipSettings() {
       sessionId: session._id,
       participantId: currentParticipantId,
       secret,
-      label: "New fee",
+      label: t("tax.newFeeLabel"),
       amount: 0,
     });
     newFeeIdRef.current = newFeeId;
@@ -258,17 +263,17 @@ export default function TaxTipSettings() {
 
   return (
     <div className="space-y-3 p-4">
-      <h1 className="sr-only">Tax &amp; Tip</h1>
+      <h1 className="sr-only">{t("tax.documentTitle")}</h1>
 
       {/* Taxes & Fees Section */}
       <div className="rounded-card border-card border-line bg-surface p-4 shadow-hard-sm">
         <div className="flex justify-between items-center mb-3">
           <h2 className="font-display text-lg font-extrabold text-ink">
-            Taxes &amp; Fees
+            {t("tax.heading")}
           </h2>
           {!isHost && (
             <span className="text-xs font-semibold text-ink-3">
-              set by host
+              {t("tax.setByHost")}
             </span>
           )}
         </div>
@@ -298,8 +303,10 @@ export default function TaxTipSettings() {
                       }
                       onBlur={() => handleFeeBlur(fee._id, "label")}
                       onFocus={(e) => e.target.select()}
-                      placeholder="Label"
-                      aria-label={`Name of fee ${fee.label || "(unnamed)"}`}
+                      placeholder={t("tax.feeLabelPlaceholder")}
+                      aria-label={t("tax.feeNameAria", {
+                        label: fee.label || t("tax.feeUnnamed"),
+                      })}
                       className="min-h-11 flex-1 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                     />
                     <div className="flex items-center gap-1">
@@ -320,7 +327,9 @@ export default function TaxTipSettings() {
                         onBlur={() => handleFeeBlur(fee._id, "amount")}
                         onFocus={(e) => e.target.select()}
                         placeholder="0.00"
-                        aria-label={`Amount for ${fee.label || "this fee"} in dollars`}
+                        aria-label={t("tax.feeAmountAria", {
+                          label: fee.label || t("tax.thisFee"),
+                        })}
                         className="tabular w-20 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                       />
                     </div>
@@ -328,7 +337,9 @@ export default function TaxTipSettings() {
                       type="button"
                       onClick={() => handleRemoveFee(fee._id)}
                       className="flex min-h-11 min-w-11 items-center justify-center rounded-tile p-2 text-ink-3 transition-colors hover:text-alert focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                      aria-label={`Remove ${fee.label || "unnamed"} fee`}
+                      aria-label={t("tax.removeFeeAria", {
+                        label: fee.label || t("tax.unnamedFee"),
+                      })}
                     >
                       <svg
                         aria-hidden="true"
@@ -352,7 +363,7 @@ export default function TaxTipSettings() {
                       {fee.label}
                     </span>
                     <span className="tabular font-bold text-ink">
-                      ${(fee.amount / 100).toFixed(2)}
+                      {formatMoney(fee.amount)}
                     </span>
                   </>
                 )}
@@ -367,13 +378,13 @@ export default function TaxTipSettings() {
               onClick={handleAddFee}
               className="min-h-11 w-full rounded-tile border-card border-dashed border-line px-3 py-2 text-sm font-bold text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
-              + Add fee
+              {t("tax.addFee")}
             </button>
           )}
 
           {/* Empty state for non-host */}
           {!isHost && fees.length === 0 && (
-            <p className="text-sm italic text-ink-3">No taxes or fees added</p>
+            <p className="text-sm italic text-ink-3">{t("tax.noFees")}</p>
           )}
         </div>
 
@@ -382,10 +393,10 @@ export default function TaxTipSettings() {
           <div className="mt-3 border-t-2 border-line-soft pt-2.5">
             <div className="flex justify-between text-sm">
               <span className="font-semibold text-ink-2">
-                Total taxes &amp; fees:
+                {t("tax.feesTotal")}
               </span>
               <span className="tabular font-bold text-ink">
-                ${(totalFees / 100).toFixed(2)}
+                {formatMoney(totalFees)}
               </span>
             </div>
           </div>
@@ -395,10 +406,12 @@ export default function TaxTipSettings() {
       {/* Tip Section */}
       <div className="rounded-card border-card border-line bg-surface p-4 shadow-hard-sm">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="font-display text-lg font-extrabold text-ink">Tip</h2>
+          <h2 className="font-display text-lg font-extrabold text-ink">
+            {t("tip.heading")}
+          </h2>
           {!isHost && (
             <span className="text-xs font-semibold text-ink-3">
-              set by host
+              {t("tax.setByHost")}
             </span>
           )}
         </div>
@@ -408,7 +421,7 @@ export default function TaxTipSettings() {
             {/* Tip Type Selection */}
             <div
               role="radiogroup"
-              aria-label="How to calculate the tip"
+              aria-label={t("tip.radioGroupAria")}
               className="flex flex-wrap gap-2"
             >
               {TIP_TYPES.map(({ value, label }, index) => (
@@ -429,7 +442,7 @@ export default function TaxTipSettings() {
                       : "bg-surface text-ink-2"
                   }`}
                 >
-                  {label}
+                  {t(label)}
                 </button>
               ))}
             </div>
@@ -451,7 +464,7 @@ export default function TaxTipSettings() {
                     onBlur={handleTipBlur}
                     onFocus={(e) => e.target.select()}
                     placeholder="0.00"
-                    aria-label="Tip amount in dollars"
+                    aria-label={t("tip.amountAria")}
                     className="tabular w-28 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   />
                 </>
@@ -469,8 +482,8 @@ export default function TaxTipSettings() {
                     placeholder="0"
                     aria-label={
                       tipType === "percent_total"
-                        ? "Tip percentage of subtotal plus tax"
-                        : "Tip percentage of subtotal"
+                        ? t("tip.percentTotalAria")
+                        : t("tip.percentSubtotalAria")
                     }
                     className="tabular w-20 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   />
@@ -486,11 +499,13 @@ export default function TaxTipSettings() {
             {/* Read-only display for non-host */}
             <div className="text-sm font-semibold text-ink-2">
               {tipType === "percent_subtotal" &&
-                `${tipInput || 0}% on subtotal`}
+                t("tip.readonlyPercentSubtotal", { value: tipInput || 0 })}
               {tipType === "percent_total" &&
-                `${tipInput || 0}% on subtotal + tax`}
+                t("tip.readonlyPercentTotal", { value: tipInput || 0 })}
               {tipType === "manual" &&
-                `$${tipInput ? parseFloat(tipInput).toFixed(2) : "0.00"} fixed amount`}
+                t("tip.readonlyManual", {
+                  amount: formatMoney(currentTipValue),
+                })}
             </div>
           </div>
         )}
@@ -499,9 +514,9 @@ export default function TaxTipSettings() {
         {groupSubtotal > 0 && (
           <div className="mt-3 border-t-2 border-line-soft pt-2.5">
             <div className="flex justify-between text-sm">
-              <span className="font-semibold text-ink-2">Tip total:</span>
+              <span className="font-semibold text-ink-2">{t("tip.total")}</span>
               <span className="tabular font-bold text-ink">
-                ${(tipPreview / 100).toFixed(2)}
+                {formatMoney(tipPreview)}
               </span>
             </div>
           </div>
@@ -513,28 +528,26 @@ export default function TaxTipSettings() {
         <div className="rounded-card border-card border-total-line bg-total-bg p-4">
           <div className="flex items-center justify-between">
             <span className="font-display text-lg font-extrabold text-total-fg">
-              Group Total
+              {t("tax.groupTotal")}
             </span>
             <span className="tabular font-display text-2xl font-extrabold text-accent">
-              $
-              {(
-                (groupSubtotal + totalFees + currentGratuity + tipPreview) /
-                100
-              ).toFixed(2)}
+              {formatMoney(
+                groupSubtotal + totalFees + currentGratuity + tipPreview,
+              )}
             </span>
           </div>
           <div className="tabular mt-2 space-y-1 text-sm text-total-muted">
             <div className="flex justify-between">
-              <span>Subtotal:</span>
-              <span>${(groupSubtotal / 100).toFixed(2)}</span>
+              <span>{t("tax.subtotalLine")}</span>
+              <span>{formatMoney(groupSubtotal)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Taxes & Fees:</span>
-              <span>${(totalFees / 100).toFixed(2)}</span>
+              <span>{t("tax.feesLine")}</span>
+              <span>{formatMoney(totalFees)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Tip:</span>
-              <span>${(tipPreview / 100).toFixed(2)}</span>
+              <span>{t("tax.tipLine")}</span>
+              <span>{formatMoney(tipPreview)}</span>
             </div>
           </div>
         </div>

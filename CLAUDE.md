@@ -92,6 +92,33 @@ Two themes ship: **Snack Pack** (light) and **Night Snack** (dark), swapped by
 - `components/Mark.tsx` is the app mark. `<Mark>` holds down to 32px;
   `<MarkSmall>` is a separate drawing for 24px and under.
 
+### Languages
+
+Four ship: English, Spanish (Latin American), German and Thai, switched by
+`components/LanguagePicker.tsx`. Never put a user-facing string in a component.
+
+- `lib/i18n/en.ts` is the source of truth. `Messages` is derived from it
+  (`typeof en`), so every other catalog is checked against it by tsc — a missing
+  key, a stray key, or a plural where a plain string belongs fails
+  `npm run build` rather than shipping a blank label.
+- `useT()` gives you `t("some.key", { name })`. Use `useLocale().tNodes` when a
+  placeholder is a React node (a bolded name) — do not splice markup around a
+  translated fragment, because the placeholder does not sit in the same position
+  in every language.
+- Plurals are `{ one, other }` and are selected by `Intl.PluralRules`, never by
+  `count === 1`. Thai has one grammatical number and always takes `other`.
+- The resolved locale is written to `<html lang>`, by the inline script in
+  `index.html` before first paint and by `LocaleProvider` after. First visit
+  follows `navigator.languages`, matched on the primary subtag, so `es-MX` and
+  `es-419` both get Spanish; an explicit choice is stored in `split_locale` and
+  wins thereafter.
+- **Money is deliberately not localized** — see `lib/money.ts`. Amounts are USD
+  cents with no currency in the schema, and the receipt on the table is printed
+  `$12.50`. Dates do follow the locale.
+- Thai glyphs come from Noto Sans Thai, listed *after* the Latin faces in the
+  font stacks so it only ever picks up Thai runs. Google Fonts splits it by
+  `unicode-range`, so nobody reading the other three downloads it.
+
 ### Environment Variables
 
 - `ANTHROPIC_API_KEY` — Required in `.env.local` for receipt OCR

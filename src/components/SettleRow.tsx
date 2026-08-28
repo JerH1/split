@@ -2,11 +2,13 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import {
-  PAYMENT_METHOD_LABELS,
   PaymentMethod,
   buildPaymentUrl,
   formatHandle,
+  paymentMethodLabel,
 } from "../lib/paymentLinks";
+import { useT } from "../lib/i18n/context";
+import { formatMoney } from "../lib/money";
 
 interface SettleRowProps {
   participantId: Id<"participants">;
@@ -45,6 +47,7 @@ export default function SettleRow({
   isHost,
   billLabel,
 }: SettleRowProps) {
+  const t = useT();
   const setPaid = useMutation(api.participants.setPaid);
 
   const isPaid = paidAt !== undefined;
@@ -69,12 +72,15 @@ export default function SettleRow({
               rel="noopener noreferrer"
               className="inline-flex min-h-11 items-center rounded-full border-2 border-line bg-accent px-4 text-sm font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             >
-              Pay {name} ${(total / 100).toFixed(2)}
+              {t("settle.payAmount", { name, amount: formatMoney(total) })}
             </a>
           ) : (
             // "Other" has no deep link, so the handle itself is the useful thing.
             <span className="text-sm text-ink-2">
-              Pay {name} via {formatHandle(paymentMethod, paymentHandle)}
+              {t("settle.payVia", {
+                name,
+                handle: formatHandle(paymentMethod, paymentHandle),
+              })}
             </span>
           )}
         </>
@@ -98,26 +104,28 @@ export default function SettleRow({
               : "bg-surface text-ink-2 active:translate-y-px"
           }`}
         >
-          {isPaid ? "✓ Settled" : "Mark settled"}
+          {isPaid ? t("settle.settled") : t("settle.markSettled")}
         </button>
       )}
 
       {isPaid && !canMarkPaid && (
         <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent-ink">
-          ✓ Settled
+          {t("settle.settledBadge")}
         </span>
       )}
 
       {!isCurrentUser && !paymentHandle && (
         <span className="text-sm italic text-ink-3">
-          {name} hasn't added a payment handle
+          {t("settle.noHandle", { name })}
         </span>
       )}
 
       {isCurrentUser && paymentMethod && paymentHandle && (
         <span className="text-sm text-ink-2">
-          Others pay you at {PAYMENT_METHOD_LABELS[paymentMethod]}{" "}
-          {formatHandle(paymentMethod, paymentHandle)}
+          {t("settle.othersPayYou", {
+            method: paymentMethodLabel(paymentMethod, t("settle.methodOther")),
+            handle: formatHandle(paymentMethod, paymentHandle),
+          })}
         </span>
       )}
     </div>

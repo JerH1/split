@@ -1,6 +1,8 @@
 import { useConvexConnectionState } from "convex/react";
+import { useT } from "../lib/i18n/context";
 
 export default function ConnectionStatus() {
+  const t = useT();
   const connectionState = useConvexConnectionState();
 
   // Only show when not connected
@@ -10,13 +12,15 @@ export default function ConnectionStatus() {
 
   // Determine status: "reconnecting" if we've connected before, "connecting" otherwise
   const isReconnecting = connectionState.hasEverConnected;
-  const statusText = isReconnecting ? "Reconnecting..." : "Connecting...";
+  const statusText = isReconnecting
+    ? t("connection.reconnecting")
+    : t("connection.connecting");
   const bgColor = "bg-accent";
   const textColor = "text-accent-ink";
 
   // Show "Connection lost" for extended disconnection (multiple retries)
   const isConnectionLost = connectionState.connectionRetries > 2;
-  const displayText = isConnectionLost ? "Connection lost" : statusText;
+  const displayText = isConnectionLost ? t("connection.lost") : statusText;
   const displayBg = isConnectionLost ? "bg-alert" : bgColor;
   const displayTextColor = isConnectionLost ? "text-alert-on" : textColor;
 

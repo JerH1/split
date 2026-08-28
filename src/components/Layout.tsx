@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Outlet, useLocation } from "react-router";
 import ConnectionStatus from "./ConnectionStatus";
+import { useT } from "../lib/i18n/context";
 
 export default function Layout() {
+  const t = useT();
   const { pathname } = useLocation();
   const mainRef = useRef<HTMLElement>(null);
   const isFirstRender = useRef(true);
@@ -27,7 +29,7 @@ export default function Layout() {
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-tile focus:border-card focus:border-line focus:bg-surface focus:px-4 focus:py-2 focus:font-bold focus:text-ink focus:shadow-hard"
       >
-        Skip to content
+        {t("a11y.skipToContent")}
       </a>
 
       {/* Mobile-first container - max width for tablet/desktop */}

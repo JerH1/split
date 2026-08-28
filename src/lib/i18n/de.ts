@@ -1,0 +1,248 @@
+import type { Messages } from "./en";
+
+/**
+ * German, in the "du" form. A group of friends dividing a restaurant check is
+ * the one context where "Sie" would be actively wrong.
+ *
+ * Two deliberate choices worth knowing about:
+ *
+ * - "Host" is kept as the loanword rather than "Gastgeber(in)". The word lands
+ *   in a badge a few characters wide, where neither a gendered form nor a
+ *   "Gastgeber:in" spelling fits or reads well.
+ * - German runs long, and this UI is a 375px phone. Labels that sit in tabs,
+ *   badges and side-by-side buttons are kept short on purpose ("Beitreten",
+ *   "Summen", "Zuletzt") even where a fuller phrase would be more literal.
+ */
+export const de: Messages = {
+  "app.tagline": "Alle nehmen sich, was sie gegessen haben.",
+  "app.noSignUp": "keine Anmeldung nötig",
+  "common.yourName": "Dein Name",
+  "common.enterYourName": "Namen eingeben",
+  "common.cancel": "Abbrechen",
+  "common.save": "Speichern",
+  "common.close": "Schließen",
+  "common.remove": "Entfernen",
+  "common.view": "Ansehen",
+  "common.tryAgain": "Nochmal versuchen",
+  "common.checking": "Prüfen...",
+  "common.uploading": "Wird hochgeladen...",
+  "common.host": "Host",
+  "a11y.skipToContent": "Zum Inhalt springen",
+  "common.language": "Sprache",
+  "common.chooseLanguage": "Sprache wählen",
+
+  "home.gotACode": "Hast du einen Code?",
+  "home.optional": "optional",
+  "home.billFound": "Rechnung gefunden!",
+  "home.noBillWithCode": "Keine Rechnung mit diesem Code",
+  "home.joining": "Beitreten...",
+  "home.creating": "Wird erstellt...",
+  "home.joinBill": "Beitreten",
+  "home.startBill": "Neue Rechnung",
+  "home.failedToJoin": "Beitritt fehlgeschlagen",
+  "home.failedToCreate": "Rechnung konnte nicht erstellt werden",
+  "home.recent": "Zuletzt",
+  "home.billNamed": "Rechnung {code}",
+
+  "session.loading": "Rechnung wird geladen...",
+  "session.notFoundTitle": "Rechnung nicht gefunden",
+  "session.notFoundBody":
+    "Der Code „{code}“ gehört zu keiner aktiven Rechnung. Vielleicht ist sie abgelaufen, oder es ist ein Tippfehler.",
+  "session.startANewBill": "Neue Rechnung starten",
+  "session.backToHome": "Zurück zur Startseite",
+  "session.copyCodeAria": "Rechnungscode {digits}. Link zum Teilen kopieren.",
+  "session.copied": "Kopiert!",
+  "session.tapToCopy": "tippen zum Kopieren",
+  "session.linkCopied": "Link in die Zwischenablage kopiert",
+  "session.showQrCode": "QR-Code anzeigen",
+  "session.locked": "Diese Rechnung ist gesperrt.",
+  "session.lockedHost":
+    "Diese Rechnung ist gesperrt — entsperre sie unter Summen, um etwas zu ändern.",
+
+  "join.documentTitle": "Rechnung {code} beitreten",
+  "join.hostedBy": "Erstellt von {name}",
+  "join.title": "Dieser Rechnung beitreten",
+  "join.body":
+    "Gib deinen Namen ein, um die Positionen zu sehen und deinen Anteil zu nehmen.",
+  "join.failed": "Beitritt fehlgeschlagen",
+  "join.toast": "{name} ist dabei",
+
+  "tabs.aria": "Bereiche der Rechnung",
+  "tabs.items": "Positionen",
+  "tabs.taxTip": "Steuer & Trinkgeld",
+  "tabs.totals": "Summen",
+  "tabs.unclaimedAria": {
+    one: ", {count} offene Position",
+    other: ", {count} offene Positionen",
+  },
+
+  "items.documentTitle": "Positionen",
+  "items.documentTitleMerchant": "Positionen - {merchant}",
+  "items.whosHere": "Wer ist da ({count})",
+  "items.hostTag": "Host",
+  "items.receipt": "Beleg",
+  "items.receiptScanned":
+    "Beleg gescannt. Ein neuer Scan ersetzt alle Positionen.",
+  "items.onlyHostCanScan":
+    "Nur der Host kann einen Beleg für diese Rechnung scannen.",
+  "items.analyzing": "Beleg wird ausgewertet...",
+  "items.extracting": "Positionen werden per KI erkannt",
+  "items.somethingWentWrong": "Etwas ist schiefgelaufen",
+  "items.heading": "Positionen",
+  "items.headingCount": "Positionen ({count})",
+  "items.upForGrabs": "{count} noch offen",
+  "items.addItem": "+ Position hinzufügen",
+  "items.total": "Summe Positionen",
+
+  "receipt.rejectLandscapeTitle": "Das sieht nicht nach einem Beleg aus",
+  "receipt.rejectLandscapeHint": "Fotografiere stattdessen deinen Beleg",
+  "receipt.rejectDocumentTitle":
+    "Das sieht nach einem Dokument aus, nicht nach einem Beleg",
+  "receipt.rejectDocumentHint":
+    "Achte darauf, einen Kassenbon zu fotografieren",
+  "receipt.rejectBlurryTitle": "Das Bild ist zu unscharf",
+  "receipt.rejectBlurryHint": "Mach ein neues Foto mit besserem Licht",
+  "receipt.rejectOtherTitle": "Wir konnten das nicht als Beleg erkennen",
+  "receipt.rejectOtherHint": "Mach ein schärferes Foto von deinem Beleg",
+  "receipt.notConfiguredTitle": "Beleg-Scan ist nicht eingerichtet",
+  "receipt.notConfiguredHint":
+    "Dieses Deployment hat keinen Anthropic-API-Schlüssel. Trag die Positionen vorerst von Hand ein.",
+  "receipt.unreadableTitle": "Wir konnten den Beleg nicht lesen",
+  "receipt.unreadableHint":
+    "Versuch ein anderes Foto, oder trag die Positionen von Hand ein.",
+  "receipt.threwTitle": "Beim Lesen des Belegs ist etwas schiefgelaufen",
+  "receipt.threwHint":
+    "Versuch es nochmal, oder trag die Positionen von Hand ein.",
+
+  "capture.takePhoto": "Foto aufnehmen",
+  "capture.chooseImage": "Bild wählen",
+  "capture.uploadFailed":
+    "Das Bild konnte nicht hochgeladen werden. Prüf deine Verbindung und versuch es nochmal.",
+  "viewer.dialogAria": "Originalbeleg",
+  "viewer.closeAria": "Beleg schließen",
+  "viewer.loading": "Bild wird geladen...",
+  "viewer.notFound": "Bild nicht gefunden",
+  "viewer.imageAlt": "Originalbeleg dieser Rechnung",
+
+  "balance.missingTitle": "{amount} dieses Belegs sind nicht zugeordnet",
+  "balance.extraTitle": "Die Positionen liegen {amount} über dem Beleg",
+  "balance.body":
+    "Belegsumme {receiptTotal}, Positionen und Gebühren ergeben aber {accountedFor}.",
+  "balance.missingHint":
+    "Beim Lesen des Fotos ist vielleicht etwas untergegangen - schau nach einer Zeile, die fehlt.",
+  "balance.extraHint":
+    "Eine Zeile wurde vielleicht doppelt gelesen, oder ein Preis falsch.",
+
+  "item.newItem": "Neue Position",
+  "item.editAria": "{name} bearbeiten",
+  "item.newItemFallback": "neue Position",
+  "item.nameLabel": "Name der Position",
+  "item.priceAria": "Preis für {name} in Dollar",
+  "item.quantityAria": "Menge für {name}",
+  "item.deleteAria": "{name} löschen",
+  "item.unnamed": "Position ohne Namen",
+  "item.genericItem": "Position",
+  "item.thisItem": "diese Position",
+  "item.unknownPerson": "Unbekannt",
+  "item.rowNotClaimed": "Nicht genommen",
+  "item.rowClaimedBy": "Genommen von {names}",
+  "item.rowQuantity": ", Menge {count}",
+  "item.everyone": "Alle",
+  "item.eachAmount": "{amount} pro Person",
+  "item.tapToClaim": "Tippen zum Nehmen",
+  "item.joinToClaim": "Tritt bei, um Positionen zu nehmen",
+  "item.removeClaimAria": "Anspruch von {name} auf {item} entfernen",
+
+  "tax.documentTitle": "Steuer & Trinkgeld",
+  "tax.heading": "Steuern & Gebühren",
+  "tax.setByHost": "vom Host gesetzt",
+  "tax.feeLabelPlaceholder": "Bezeichnung",
+  "tax.feeNameAria": "Name der Gebühr {label}",
+  "tax.feeUnnamed": "(ohne Namen)",
+  "tax.feeAmountAria": "Betrag für {label} in Dollar",
+  "tax.thisFee": "diese Gebühr",
+  "tax.removeFeeAria": "Gebühr {label} entfernen",
+  "tax.unnamedFee": "unbenannt",
+  "tax.addFee": "+ Gebühr hinzufügen",
+  "tax.newFeeLabel": "Neue Gebühr",
+  "tax.noFees": "Keine Steuern oder Gebühren eingetragen",
+  "tax.feesTotal": "Steuern & Gebühren gesamt:",
+  "tip.heading": "Trinkgeld",
+  "tip.percentSubtotal": "% auf die Zwischensumme",
+  "tip.percentTotal": "% auf Zwischensumme + Steuer",
+  "tip.manual": "Fester Betrag",
+  "tip.radioGroupAria": "Wie das Trinkgeld berechnet wird",
+  "tip.amountAria": "Trinkgeldbetrag in Dollar",
+  "tip.percentTotalAria": "Trinkgeld in Prozent der Zwischensumme plus Steuer",
+  "tip.percentSubtotalAria": "Trinkgeld in Prozent der Zwischensumme",
+  "tip.readonlyPercentSubtotal": "{value}% auf die Zwischensumme",
+  "tip.readonlyPercentTotal": "{value}% auf Zwischensumme + Steuer",
+  "tip.readonlyManual": "{amount} fester Betrag",
+  "tip.total": "Trinkgeld gesamt:",
+  "tax.groupTotal": "Gesamt",
+  "tax.subtotalLine": "Zwischensumme:",
+  "tax.feesLine": "Steuern & Gebühren:",
+  "tax.tipLine": "Trinkgeld:",
+
+  "totals.documentTitle": "Summen",
+  "totals.loading": "Summen werden geladen...",
+  "totals.unclaimedWarning": {
+    one: "{count} Position noch offen —",
+    other: "{count} Positionen noch offen —",
+  },
+  "totals.you": "Du",
+  "totals.hostBadge": "Host",
+  "totals.doneBadge": "✓ Fertig",
+  "totals.doneClaimingTitle": "Fertig mit Nehmen",
+  "totals.settledBadge": "Bezahlt",
+  "totals.itemsLine": "Positionen {amount}",
+  "totals.feesLine": "Steuern & Gebühren {amount}",
+  "totals.tipLine": "Trinkgeld {amount}",
+  "totals.claimedItems": "Genommene Positionen",
+  "totals.noneClaimed": "Noch nichts genommen",
+  "totals.splitCount": "· geteilt durch {count}",
+  "totals.tableTotal": "Tischsumme",
+  "totals.excludesUnclaimed": "ohne {amount} offen",
+  "totals.imDoneClaiming": "Ich bin fertig",
+  "totals.stillClaiming": "Noch dabei: {names}",
+  "totals.everyoneDone": "Alle sind fertig — diese Summen sind endgültig.",
+  "totals.shareCopied": "In die Zwischenablage kopiert",
+  "totals.shareFailed": "Teilen fehlgeschlagen — nochmal versuchen",
+  "totals.share": "Aufteilung teilen",
+  "totals.unlockBill": "Rechnung entsperren",
+  "totals.lockBill": "Rechnung sperren",
+  "totals.lockingExplainer":
+    "Sperren friert Positionen und Ansprüche ein, damit sich nach dem Bezahlen nichts mehr ändert.",
+  "totals.noParticipants": "Noch niemand dabei",
+
+  "settle.payAmount": "{name} {amount} zahlen",
+  "settle.payVia": "{name} über {handle} bezahlen",
+  "settle.settled": "✓ Bezahlt",
+  "settle.settledBadge": "✓ Bezahlt",
+  "settle.markSettled": "Als bezahlt markieren",
+  "settle.noHandle": "{name} hat noch keine Zahlungsdaten hinterlegt",
+  "settle.othersPayYou": "Andere zahlen dir über {method} {handle}",
+  "settle.paidViaChange": "Bezahlt über {method} {handle} — ändern",
+  "settle.addHandle": "+ Zahlungsweg hinzufügen",
+  "settle.handleLabel": "Dein {method}-Name",
+  "settle.paypalPlaceholder": "dein-paypal-name",
+  "settle.handlePlaceholder": "dein-name",
+  "settle.couldNotSave": "Der Name konnte nicht gespeichert werden.",
+  "settle.methodOther": "Andere",
+
+  "qr.title": "QR-Code für Rechnung {code}",
+  "qr.hint": "Richte eine Kamera darauf, um die Rechnung zu öffnen.",
+
+  "connection.reconnecting": "Neu verbinden...",
+  "connection.connecting": "Verbinden...",
+  "connection.lost": "Keine Verbindung",
+
+  "theme.switchTo": "Zu {name} wechseln",
+
+  "share.headingMerchant": "Aufteilung für {merchant}",
+  "share.heading": "Rechnungsaufteilung",
+  "share.total": "Gesamt: {amount}",
+  "share.unclaimed": "Offen: {amount} noch aufzuteilen",
+  "share.openBill": "Rechnung öffnen: {url}",
+  "share.code": "Code: {code}",
+};

@@ -1,7 +1,9 @@
 import { useParams } from "react-router";
 import QRCode from "react-qr-code";
+import { useT } from "../lib/i18n/context";
 
 export default function QrCode() {
+  const t = useT();
   const { code } = useParams<{ code: string }>();
   const shareUrl = `${window.location.origin}/bill/${code}`;
 
@@ -19,15 +21,13 @@ export default function QrCode() {
           size={240}
           bgColor="#FFFFFF"
           fgColor="#221C12"
-          title={`QR code for bill ${code}`}
+          title={t("qr.title", { code: code ?? "" })}
         />
       </div>
       <p className="tabular font-display text-2xl font-extrabold tracking-[0.24em] indent-[0.24em] text-brand">
         {code}
       </p>
-      <p className="max-w-xs text-center text-sm text-ink-2">
-        Point a camera at this to open the bill.
-      </p>
+      <p className="max-w-xs text-center text-sm text-ink-2">{t("qr.hint")}</p>
     </div>
   );
 }

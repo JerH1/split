@@ -11,38 +11,47 @@ import { updateMerchantNameInBillHistory } from "../lib/billHistory";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { Context } from "../pages/Session";
 import { initial, personColorVar } from "../lib/participantColors";
+import { useT } from "../lib/i18n/context";
+import { MessageKey } from "../lib/i18n/en";
+import { formatMoney } from "../lib/money";
 
 // Receipt processing state machine
 type ReceiptState =
   | { step: "idle" }
   | { step: "uploading" }
   | { step: "processing"; storageId: Id<"_storage"> }
-  | { step: "error"; message: string };
+  // Keys rather than a finished sentence: someone can switch language while an
+  // error is on screen, and a string captured at throw time would not follow.
+  | { step: "error"; titleKey: MessageKey; hintKey: MessageKey };
 
 // Confidence threshold for handwritten tip pre-fill (higher than receipt validation)
 const HANDWRITTEN_TIP_CONFIDENCE_THRESHOLD = 0.8;
 
-// Map rejection reasons to user-friendly error messages
-const REJECTION_MESSAGES: Record<string, { title: string; hint: string }> = {
+// Map rejection reasons to the pair of messages shown for them
+const REJECTION_MESSAGES: Record<
+  string,
+  { title: MessageKey; hint: MessageKey }
+> = {
   landscape_photo: {
-    title: "This doesn't look like a receipt",
-    hint: "Try taking a photo of your receipt instead",
+    title: "receipt.rejectLandscapeTitle",
+    hint: "receipt.rejectLandscapeHint",
   },
   document: {
-    title: "This looks like a document, not a receipt",
-    hint: "Make sure you're photographing a store receipt",
+    title: "receipt.rejectDocumentTitle",
+    hint: "receipt.rejectDocumentHint",
   },
   blurry: {
-    title: "The image is too blurry",
-    hint: "Try taking another photo with better lighting",
+    title: "receipt.rejectBlurryTitle",
+    hint: "receipt.rejectBlurryHint",
   },
   other: {
-    title: "We couldn't recognize this as a receipt",
-    hint: "Try taking a clearer photo of your receipt",
+    title: "receipt.rejectOtherTitle",
+    hint: "receipt.rejectOtherHint",
   },
 };
 
 export default function Items() {
+  const t = useT();
   const context: Context = useOutletContext();
   const {
     participants,
@@ -57,7 +66,11 @@ export default function Items() {
     fees,
   } = context;
 
-  useDocumentTitle(session?.merchant ? `Items - ${session.merchant}` : "Items");
+  useDocumentTitle(
+    session?.merchant
+      ? t("items.documentTitleMerchant", { merchant: session.merchant })
+      : t("items.documentTitle"),
+  );
 
   // Draft item state - local only until saved
   const [draftItem, setDraftItem] = useState<{
@@ -105,7 +118,8 @@ export default function Items() {
             REJECTION_MESSAGES.other;
           setReceiptState({
             step: "error",
-            message: `${msg.title}\n\n${msg.hint}`,
+            titleKey: msg.title,
+            hintKey: msg.hint,
           });
           return;
         }
@@ -113,8 +127,8 @@ export default function Items() {
         if (result.error === "not_configured") {
           setReceiptState({
             step: "error",
-            message:
-              "Receipt scanning isn't set up\n\nThis deployment has no Anthropic API key. Add the items by hand for now.",
+            titleKey: "receipt.notConfiguredTitle",
+            hintKey: "receipt.notConfiguredHint",
           });
           return;
         }
@@ -123,8 +137,8 @@ export default function Items() {
         console.error("Receipt parsing failed:", result);
         setReceiptState({
           step: "error",
-          message:
-            "We couldn't read that receipt\n\nTry another photo, or add the items by hand.",
+          titleKey: "receipt.unreadableTitle",
+          hintKey: "receipt.unreadableHint",
         });
         return;
       }
@@ -207,8 +221,8 @@ export default function Items() {
       console.error("Receipt parsing failed:", error);
       setReceiptState({
         step: "error",
-        message:
-          "Something went wrong reading that receipt\n\nTry again, or add the items by hand.",
+        titleKey: "receipt.threwTitle",
+        hintKey: "receipt.threwHint",
       });
     }
   }
@@ -267,7 +281,7 @@ export default function Items() {
       {sortedParticipants.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
-            Who's Here ({sortedParticipants.length})
+            {t("items.whosHere", { count: sortedParticipants.length })}
           </h2>
           <div className="flex flex-wrap gap-2">
             {sortedParticipants.map((participant, index) => (
@@ -284,7 +298,9 @@ export default function Items() {
                 </span>
                 <span className="font-bold text-ink">{participant.name}</span>
                 {participant.isHost && (
-                  <span className="text-xs font-semibold text-ink-3">host</span>
+                  <span className="text-xs font-semibold text-ink-3">
+                    {t("items.hostTag")}
+                  </span>
                 )}
               </div>
             ))}
@@ -295,7 +311,7 @@ export default function Items() {
       {/* Receipt section */}
       <div className="space-y-2">
         <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
-          Receipt
+          {t("items.receipt")}
         </h2>
 
         {/* Idle state: show capture UI */}
@@ -312,14 +328,14 @@ export default function Items() {
                   }}
                 />
                 <p className="flex-1 text-sm text-ink-2">
-                  Receipt scanned. Scanning another replaces every item.
+                  {t("items.receiptScanned")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setShowReceiptImage(true)}
                   className="min-h-11 shrink-0 rounded-full border-2 border-line px-3 text-xs font-bold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                 >
-                  View
+                  {t("common.view")}
                 </button>
               </div>
             )}
@@ -334,9 +350,7 @@ export default function Items() {
                 onUpload={handleReceiptUpload}
               />
             ) : (
-              <p className="text-sm text-ink-2">
-                Only the host can scan a receipt for this bill.
-              </p>
+              <p className="text-sm text-ink-2">{t("items.onlyHostCanScan")}</p>
             )}
           </div>
         )}
@@ -348,7 +362,7 @@ export default function Items() {
               aria-hidden="true"
               className="mx-auto h-8 w-8 animate-spin rounded-full border-3 border-line-soft border-t-brand"
             ></div>
-            <p className="mt-3 text-ink-2">Uploading...</p>
+            <p className="mt-3 text-ink-2">{t("common.uploading")}</p>
           </div>
         )}
 
@@ -359,8 +373,10 @@ export default function Items() {
               aria-hidden="true"
               className="mx-auto h-8 w-8 animate-spin rounded-full border-3 border-line-soft border-t-brand"
             ></div>
-            <p className="mt-3 font-semibold text-ink">Analyzing receipt...</p>
-            <p className="mt-1 text-sm text-ink-2">Extracting items with AI</p>
+            <p className="mt-3 font-semibold text-ink">
+              {t("items.analyzing")}
+            </p>
+            <p className="mt-1 text-sm text-ink-2">{t("items.extracting")}</p>
           </div>
         )}
 
@@ -385,29 +401,16 @@ export default function Items() {
                 d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            {receiptState.message.includes("\n\n") ? (
-              <>
-                <p className="font-bold text-alert-ink">
-                  {receiptState.message.split("\n\n")[0]}
-                </p>
-                <p className="mt-1 text-sm text-ink-2">
-                  {receiptState.message.split("\n\n")[1]}
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="font-bold text-alert-ink">Something went wrong</p>
-                <p className="mt-1 text-sm text-ink-2">
-                  {receiptState.message}
-                </p>
-              </>
-            )}
+            <p className="font-bold text-alert-ink">
+              {t(receiptState.titleKey)}
+            </p>
+            <p className="mt-1 text-sm text-ink-2">{t(receiptState.hintKey)}</p>
             <button
               type="button"
               onClick={handleRetry}
               className="mt-4 min-h-11 rounded-full border-card border-line bg-accent px-5 font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             >
-              Try Again
+              {t("common.tryAgain")}
             </button>
           </div>
         )}
@@ -425,11 +428,13 @@ export default function Items() {
 
         <div className="flex items-baseline justify-between">
           <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
-            Items {items && items.length > 0 ? `(${items.length})` : ""}
+            {items && items.length > 0
+              ? t("items.headingCount", { count: items.length })
+              : t("items.heading")}
           </h2>
           {unclaimedCount > 0 && (
             <span className="text-xs font-bold text-alert">
-              {unclaimedCount} up for grabs
+              {t("items.upForGrabs", { count: unclaimedCount })}
             </span>
           )}
         </div>
@@ -483,16 +488,16 @@ export default function Items() {
                 : "border-line text-ink"
             }`}
           >
-            + Add Item
+            {t("items.addItem")}
           </button>
         )}
 
         {/* Items total */}
         {items && items.length > 0 && (
           <div className="flex items-center justify-between border-t-2 border-line-soft pt-3">
-            <span className="font-bold text-ink-2">Items Total</span>
+            <span className="font-bold text-ink-2">{t("items.total")}</span>
             <span className="tabular font-display text-xl font-extrabold text-ink">
-              ${(groupSubtotal / 100).toFixed(2)}
+              {formatMoney(groupSubtotal)}
             </span>
           </div>
         )}

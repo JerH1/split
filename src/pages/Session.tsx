@@ -7,6 +7,8 @@ import JoinGate from "../components/JoinGate";
 import JoinToast from "../components/JoinToast";
 import TabNavigation from "../components/TabNavigation";
 import ThemeToggle from "../components/ThemeToggle";
+import LanguagePicker from "../components/LanguagePicker";
+import { useT } from "../lib/i18n/context";
 import { getStoredParticipant, StoredCredentials } from "../lib/sessionStorage";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 
@@ -31,10 +33,11 @@ export interface Context {
 }
 
 export default function Session() {
+  const t = useT();
   const { code } = useParams<{ code: string }>();
 
   // Child routes override this with their own tab name once loaded.
-  useDocumentTitle(code ? `Bill ${code}` : undefined);
+  useDocumentTitle(code ? t("home.billNamed", { code }) : undefined);
 
   // State to track credentials after just joining (before localStorage is read again)
   const [justJoinedCredentials, setJustJoinedCredentials] =
@@ -160,7 +163,7 @@ export default function Session() {
   if (session === undefined) {
     return (
       <div role="status" className="p-4">
-        <p className="text-ink-2">Loading bill...</p>
+        <p className="text-ink-2">{t("session.loading")}</p>
       </div>
     );
   }
@@ -170,17 +173,16 @@ export default function Session() {
     return (
       <div className="p-4 text-center">
         <h1 className="mb-2 font-display text-2xl font-extrabold leading-[1.3] text-ink">
-          Bill Not Found
+          {t("session.notFoundTitle")}
         </h1>
         <p className="mb-4 text-ink-2">
-          Code "{code}" doesn't match any active bill. It might have expired or
-          there's a typo.
+          {t("session.notFoundBody", { code: code ?? "" })}
         </p>
         <Link
           to="/"
           className="inline-flex min-h-11 items-center rounded-tile font-bold text-ink underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
-          <span aria-hidden="true">←</span>&nbsp;Start a new bill
+          <span aria-hidden="true">←</span>&nbsp;{t("session.startANewBill")}
         </Link>
       </div>
     );
@@ -198,7 +200,7 @@ export default function Session() {
   if (needsToJoin) {
     // Find host name for display
     const hostParticipant = participants?.find((p) => p.isHost);
-    const hostName = hostParticipant?.name ?? "Host";
+    const hostName = hostParticipant?.name ?? t("common.host");
 
     return (
       <JoinGate
@@ -241,10 +243,15 @@ export default function Session() {
       {/* Session Header */}
       <div className="sticky top-0 z-10 flex w-full items-center gap-1 border-b-2 border-brand bg-surface px-1">
         {/* Back button */}
+        {/* Icon only. With the language picker added this header carries five
+            controls, and a translated word beside the chevron ("Rechnungen")
+            overflowed a 375px screen - pushing the theme toggle off the edge
+            and the tab bar below the fold. The chevron plus the aria-label
+            carry the same meaning in every language and at a fixed width. */}
         <Link
           to="/"
-          className="flex min-h-11 shrink-0 items-center gap-1 rounded-tile px-2 py-3 text-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
-          aria-label="Back to home"
+          className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-tile py-3 text-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+          aria-label={t("session.backToHome")}
         >
           <svg
             aria-hidden="true"
@@ -259,14 +266,15 @@ export default function Session() {
           >
             <path d="M15 18l-6-6 6-6" />
           </svg>
-          <span className="text-sm font-bold">Bills</span>
         </Link>
 
         {/* Tappable Session Code */}
         <button
           type="button"
           onClick={handleCopyCode}
-          aria-label={`Bill code ${session.code.split("").join(" ")}. Copy share link.`}
+          aria-label={t("session.copyCodeAria", {
+            digits: session.code.split("").join(" "),
+          })}
           className="flex flex-1 flex-col items-center rounded-tile py-2 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus active:translate-y-px"
         >
           <span
@@ -279,7 +287,7 @@ export default function Session() {
             aria-hidden="true"
             className="text-[11px] font-semibold text-ink-3"
           >
-            {copied ? "Copied!" : "tap to copy link"}
+            {copied ? t("session.copied") : t("session.tapToCopy")}
           </span>
         </button>
 
@@ -287,7 +295,7 @@ export default function Session() {
         <Link
           to="qr"
           className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-tile text-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
-          aria-label="Show QR code"
+          aria-label={t("session.showQrCode")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -333,13 +341,17 @@ export default function Session() {
           </svg>
         </Link>
 
+        <LanguagePicker
+          className="shrink-0"
+          buttonClassName="border-0 bg-transparent text-ink-2 shadow-none"
+        />
         <ThemeToggle className="shrink-0 border-0 bg-transparent shadow-none" />
       </div>
 
       {/* Copy confirmation. A persistent live region, so the change is
           announced without disturbing the button's own label. */}
       <p aria-live="polite" className="sr-only">
-        {copied ? "Share link copied to clipboard" : ""}
+        {copied ? t("session.linkCopied") : ""}
       </p>
 
       {/* Locked banner - the split is frozen, so say so before anyone tries
@@ -361,10 +373,7 @@ export default function Session() {
               clipRule="evenodd"
             />
           </svg>
-          <span>
-            This bill is locked
-            {isHost ? " — unlock it from Totals to make changes." : "."}
-          </span>
+          <span>{isHost ? t("session.lockedHost") : t("session.locked")}</span>
         </div>
       )}
 

@@ -1,5 +1,6 @@
 import { useTheme } from "../lib/useTheme";
 import { THEME_NAMES } from "../lib/theme";
+import { useT } from "../lib/i18n/context";
 
 function SunIcon() {
   return (
@@ -40,15 +41,19 @@ function MoonIcon() {
  * not the one you are in — the icon is the destination.
  */
 export default function ThemeToggle({ className }: { className?: string }) {
+  const t = useT();
   const { theme, toggle } = useTheme();
   const next = theme === "dark" ? "light" : "dark";
+  // The theme names are the product's own, so they stay as they are in every
+  // language; only the sentence around them is translated.
+  const label = t("theme.switchTo", { name: THEME_NAMES[next] });
 
   return (
     <button
       type="button"
       onClick={toggle}
-      title={`Switch to ${THEME_NAMES[next]}`}
-      aria-label={`Switch to ${next} mode (${THEME_NAMES[next]})`}
+      title={label}
+      aria-label={label}
       className={`min-h-11 min-w-11 flex items-center justify-center rounded-full border-card border-line bg-surface text-ink transition-transform active:translate-x-px active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page ${className ?? ""}`}
     >
       {next === "dark" ? <MoonIcon /> : <SunIcon />}

@@ -7,8 +7,9 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
 
-    <!-- Resolve the theme before first paint so the wrong one never flashes.
-         Mirrors resolveTheme() in src/lib/theme.ts. -->
+    <!-- Resolve the theme and the language before first paint so neither one
+         flashes. Mirrors resolveTheme() in src/lib/theme.ts and resolveLocale()
+         in src/lib/i18n/locales.ts. -->
     <script>
       (function () {
         try {
@@ -22,6 +23,22 @@
         } catch (e) {
           document.documentElement.dataset.theme = "light";
         }
+
+        try {
+          var supported = ["en", "es", "de", "th"];
+          var lang = localStorage.getItem("split_locale");
+          if (supported.indexOf(lang) === -1) {
+            lang = null;
+            var wanted = navigator.languages || [navigator.language || "en"];
+            for (var i = 0; i < wanted.length && !lang; i++) {
+              var base = String(wanted[i]).toLowerCase().split("-")[0];
+              if (supported.indexOf(base) !== -1) lang = base;
+            }
+          }
+          document.documentElement.lang = lang || "en";
+        } catch (e) {
+          document.documentElement.lang = "en";
+        }
       })();
     </script>
 
@@ -33,8 +50,13 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Figtree and Baloo 2 carry no Thai glyphs, so Thai text would otherwise
+         fall back to whatever the device happens to have. Noto Sans Thai is
+         listed after them in the stacks in index.css, and Google Fonts splits
+         its @font-face rules by unicode-range - so a reader of English, Spanish
+         or German never downloads the Thai subset at all. -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Figtree:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Figtree:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
 

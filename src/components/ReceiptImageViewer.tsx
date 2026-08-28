@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { useT } from "../lib/i18n/context";
 
 interface ReceiptImageViewerProps {
   sessionId: Id<"sessions">;
@@ -14,6 +15,7 @@ export default function ReceiptImageViewer({
   storageId,
   onClose,
 }: ReceiptImageViewerProps) {
+  const t = useT();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const imageUrl = useQuery(api.receipts.getReceiptUrl, {
@@ -60,7 +62,7 @@ export default function ReceiptImageViewer({
     <dialog
       ref={dialogRef}
       onClick={handleBackdropClick}
-      aria-label="Original receipt"
+      aria-label={t("viewer.dialogAria")}
       className="m-0 h-full max-h-none w-full max-w-none bg-transparent p-0 backdrop:bg-black/80 flex items-center justify-center"
     >
       {/* Close button */}
@@ -68,7 +70,7 @@ export default function ReceiptImageViewer({
         type="button"
         onClick={onClose}
         className="absolute top-4 right-4 p-2 text-white hover:text-gray-300 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-        aria-label="Close receipt"
+        aria-label={t("viewer.closeAria")}
       >
         <svg
           aria-hidden="true"
@@ -94,20 +96,20 @@ export default function ReceiptImageViewer({
             aria-hidden="true"
             className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"
           ></div>
-          <p className="mt-3">Loading image...</p>
+          <p className="mt-3">{t("viewer.loading")}</p>
         </div>
       )}
 
       {/* Image not found */}
       {imageUrl === null && (
         <div className="text-white text-center">
-          <p role="alert">Image not found</p>
+          <p role="alert">{t("viewer.notFound")}</p>
           <button
             type="button"
             onClick={onClose}
             className="mt-4 min-h-[44px] px-4 py-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
           >
-            Close
+            {t("common.close")}
           </button>
         </div>
       )}
@@ -116,7 +118,7 @@ export default function ReceiptImageViewer({
       {imageUrl && (
         <img
           src={imageUrl}
-          alt="Original receipt for this bill"
+          alt={t("viewer.imageAlt")}
           className="max-w-[90vw] max-h-[85vh] object-contain"
         />
       )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocale } from "../lib/i18n/context";
 
 interface JoinToastProps {
   name: string;
@@ -6,6 +7,7 @@ interface JoinToastProps {
 }
 
 export default function JoinToast({ name, onDismiss }: JoinToastProps) {
+  const { tNodes } = useLocale();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -30,7 +32,9 @@ export default function JoinToast({ name, onDismiss }: JoinToastProps) {
       }`}
     >
       <div className="rounded-full border-card border-line bg-surface px-4 py-2 text-sm text-ink shadow-hard-sm">
-        <span className="font-bold">{name}</span> joined
+        {tNodes("join.toast", {
+          name: <span className="font-bold">{name}</span>,
+        })}
       </div>
     </div>
   );

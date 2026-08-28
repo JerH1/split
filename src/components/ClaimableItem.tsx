@@ -4,6 +4,8 @@ import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { PublicParticipant } from "../pages/Session";
 import { initial, personColor } from "../lib/participantColors";
+import { useT } from "../lib/i18n/context";
+import { formatMoney } from "../lib/money";
 
 type ItemType = Doc<"items">;
 type DraftItemType = Omit<ItemType, "_creationTime">;
@@ -38,6 +40,8 @@ export default function ClaimableItem({
   onDraftCancel,
   onDraftChange: _onDraftChange,
 }: ClaimableItemProps) {
+  const t = useT();
+
   // Check if current user has claimed this item
   const hasClaimed = currentParticipantId
     ? claims.some((c) => c.participantId === currentParticipantId)
@@ -96,7 +100,7 @@ export default function ClaimableItem({
   const claimerNames = claims
     .map((c) => {
       const participant = participants.find((p) => p._id === c.participantId);
-      return participant?.name ?? "Unknown";
+      return participant?.name ?? t("item.unknownPerson");
     })
     .sort();
 
@@ -216,12 +220,14 @@ export default function ClaimableItem({
 
   // Edit mode - stacked layout for consistent behavior on mobile and desktop
   if (isEditing) {
-    const editTarget = editName.trim() || "new item";
+    const editTarget = editName.trim() || t("item.newItemFallback");
 
     return (
       <div
         role="group"
-        aria-label={isDraft ? "New item" : `Edit ${editTarget}`}
+        aria-label={
+          isDraft ? t("item.newItem") : t("item.editAria", { name: editTarget })
+        }
         className="flex flex-col gap-2.5 rounded-card border-card border-line bg-surface p-3 shadow-hard-sm"
       >
         {/* Row 1: Name input (full width) */}
@@ -229,8 +235,8 @@ export default function ClaimableItem({
           type="text"
           value={editName}
           onChange={(e) => setEditName(e.target.value)}
-          placeholder="Item name"
-          aria-label="Item name"
+          placeholder={t("item.nameLabel")}
+          aria-label={t("item.nameLabel")}
           className="w-full min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         />
 
@@ -255,7 +261,7 @@ export default function ClaimableItem({
                   setEditPriceInput(value.toFixed(2));
                 }
               }}
-              aria-label={`Price for ${editTarget} in dollars`}
+              aria-label={t("item.priceAria", { name: editTarget })}
               className="tabular w-24 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             />
           </div>
@@ -273,7 +279,7 @@ export default function ClaimableItem({
                   setEditQuantity(parseInt(e.target.value, 10) || 1)
                 }
                 min="1"
-                aria-label={`Quantity for ${editTarget}`}
+                aria-label={t("item.quantityAria", { name: editTarget })}
                 className="tabular w-14 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               />
             </div>
@@ -287,7 +293,7 @@ export default function ClaimableItem({
             type="button"
             onClick={handleDelete}
             className="flex min-h-11 min-w-11 items-center justify-center rounded-tile px-3 py-2 text-alert transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            aria-label={`Delete ${editTarget}`}
+            aria-label={t("item.deleteAria", { name: editTarget })}
           >
             <svg
               aria-hidden="true"
@@ -312,14 +318,14 @@ export default function ClaimableItem({
             onClick={handleCancel}
             className="min-h-11 min-w-0 flex-1 rounded-full border-2 border-line bg-surface px-3 py-2 font-bold text-ink transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:translate-y-px"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             type="button"
             onClick={handleSave}
             className="min-h-11 min-w-0 flex-1 rounded-full border-2 border-line bg-accent px-3 py-2 font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
           >
-            Save
+            {t("common.save")}
           </button>
         </div>
       </div>
@@ -335,10 +341,12 @@ export default function ClaimableItem({
   // Spoken name for the row. Without this a screen reader reads the raw
   // contents, including the nested "Edit item" button, as the toggle's label.
   const rowLabel = [
-    `${item.name || "Unnamed item"}, $${(item.price / 100).toFixed(2)}`,
-    item.quantity > 1 ? `, quantity ${item.quantity}` : "",
+    `${item.name || t("item.unnamed")}, ${formatMoney(item.price)}`,
+    item.quantity > 1 ? t("item.rowQuantity", { count: item.quantity }) : "",
     ". ",
-    isUnclaimed ? "Not claimed" : `Claimed by ${claimerNames.join(", ")}`,
+    isUnclaimed
+      ? t("item.rowNotClaimed")
+      : t("item.rowClaimedBy", { names: claimerNames.join(", ") }),
   ].join("");
 
   const mineColor = personColor(participants, currentParticipantId);
@@ -376,14 +384,16 @@ export default function ClaimableItem({
         </div>
         <div className="flex shrink-0 items-center gap-1">
           <span className="tabular font-display text-lg font-extrabold text-ink">
-            ${(item.price / 100).toFixed(2)}
+            {formatMoney(item.price)}
           </span>
           {!isLocked && (
             <button
               type="button"
               onClick={handleEdit}
               className="flex min-h-11 min-w-11 items-center justify-center rounded-tile p-2 text-ink-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              aria-label={`Edit ${item.name || "item"}`}
+              aria-label={t("item.editAria", {
+                name: item.name || t("item.genericItem"),
+              })}
             >
               <svg
                 aria-hidden="true"
@@ -414,14 +424,14 @@ export default function ClaimableItem({
                   : "border-2 border-line text-ink-2"
               }`}
             >
-              Everyone
+              {t("item.everyone")}
             </button>
           )}
           {claims.map((c) => {
             const participant = participants.find(
               (p) => p._id === c.participantId,
             );
-            const name = participant?.name ?? "Unknown";
+            const name = participant?.name ?? t("item.unknownPerson");
             const color = personColor(participants, c.participantId);
             return (
               <span
@@ -441,7 +451,10 @@ export default function ClaimableItem({
                     type="button"
                     onClick={(e) => handleHostUnclaim(e, c.participantId)}
                     className="-my-1 -mr-1.5 rounded-full p-2 text-ink-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                    aria-label={`Remove ${name}'s claim on ${item.name || "this item"}`}
+                    aria-label={t("item.removeClaimAria", {
+                      name,
+                      item: item.name || t("item.thisItem"),
+                    })}
                   >
                     <svg
                       aria-hidden="true"
@@ -463,7 +476,9 @@ export default function ClaimableItem({
           })}
           {claims.length > 1 && (
             <span className="text-xs font-semibold text-ink-3">
-              ${(item.price / 100 / claims.length).toFixed(2)} each
+              {t("item.eachAmount", {
+                amount: formatMoney(item.price / claims.length),
+              })}
             </span>
           )}
         </div>
@@ -472,14 +487,14 @@ export default function ClaimableItem({
       {/* Unclaimed indicator */}
       {claimerNames.length === 0 && canClaim && (
         <div aria-hidden="true" className="mt-1 text-sm font-bold text-alert">
-          Tap to claim
+          {t("item.tapToClaim")}
         </div>
       )}
 
       {/* Not joined indicator */}
       {!canClaim && (
         <div className="mt-1 text-sm italic text-ink-3">
-          Join to claim items
+          {t("item.joinToClaim")}
         </div>
       )}
     </div>

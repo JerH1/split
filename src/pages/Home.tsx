@@ -19,9 +19,13 @@ import { getLastUsedName, setLastUsedName } from "../lib/userPreferences";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import Mark, { Wordmark } from "../components/Mark";
 import ThemeToggle from "../components/ThemeToggle";
+import LanguagePicker from "../components/LanguagePicker";
 import { personColorVar } from "../lib/participantColors";
+import { useLocale } from "../lib/i18n/context";
+import { formatMoney } from "../lib/money";
 
 export default function Home() {
+  const { t, formatDate } = useLocale();
   useDocumentTitle();
 
   // Unified name state (used for both create and join)
@@ -208,8 +212,8 @@ export default function Home() {
     } catch (err) {
       // Parse Convex error messages to extract user-friendly portion
       let errorMessage = isJoinMode
-        ? "Failed to join bill"
-        : "Failed to create bill";
+        ? t("home.failedToJoin")
+        : t("home.failedToCreate");
       if (err instanceof Error) {
         const match = err.message.match(/Uncaught Error:\s*(.+)$/);
         errorMessage = match ? match[1] : err.message;
@@ -222,20 +226,23 @@ export default function Home() {
   // Button text and style
   const buttonText = isSubmitting
     ? isJoinMode
-      ? "Joining..."
-      : "Creating..."
+      ? t("home.joining")
+      : t("home.creating")
     : isCheckingSession
-      ? "Checking..."
+      ? t("common.checking")
       : isJoinMode
-        ? "Join Bill"
-        : "Start Bill";
+        ? t("home.joinBill")
+        : t("home.startBill");
 
   const buttonDisabled =
     !canSubmit || (isValidCode && !sessionFound && !sessionNotFound);
 
   return (
     <div className="relative min-h-screen px-5 pt-14 pb-10">
-      <ThemeToggle className="absolute top-5 right-5" />
+      <div className="absolute top-5 right-5 flex items-center gap-2">
+        <LanguagePicker />
+        <ThemeToggle />
+      </div>
 
       <div className="mx-auto w-full max-w-md space-y-7">
         {/* App branding */}
@@ -244,7 +251,7 @@ export default function Home() {
           <h1 className="text-[42px] leading-[1.3]">
             <Wordmark />
           </h1>
-          <p className="text-ink-2">Everyone grabs what they ate.</p>
+          <p className="text-ink-2">{t("app.tagline")}</p>
         </div>
 
         {/* Unified form */}
@@ -255,14 +262,14 @@ export default function Home() {
               htmlFor="name"
               className="block text-sm font-semibold text-ink-2"
             >
-              Your name
+              {t("common.yourName")}
             </label>
             <input
               id="name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter your name"
+              placeholder={t("common.enterYourName")}
               autoComplete="name"
               autoCapitalize="words"
               className="w-full min-h-14 rounded-tile border-card border-line bg-surface px-4 text-lg font-semibold text-ink shadow-hard placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page"
@@ -275,8 +282,10 @@ export default function Home() {
               htmlFor="code"
               className="block text-sm font-semibold text-ink-2"
             >
-              Got a code?{" "}
-              <span className="font-normal text-ink-3">optional</span>
+              {t("home.gotACode")}{" "}
+              <span className="font-normal text-ink-3">
+                {t("home.optional")}
+              </span>
             </label>
             <input
               id="code"
@@ -310,10 +319,10 @@ export default function Home() {
                   }`}
                 >
                   {isCheckingSession || isCheckingStored
-                    ? "Checking..."
+                    ? t("common.checking")
                     : sessionFound
-                      ? "Bill found!"
-                      : "No bill with this code"}
+                      ? t("home.billFound")
+                      : t("home.noBillWithCode")}
                 </p>
               )}
             </div>
@@ -358,7 +367,7 @@ export default function Home() {
         {history.length > 0 && (
           <div className="space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-ink-3">
-              Recent
+              {t("home.recent")}
             </h2>
             <div className="space-y-3">
               {history.map((bill, index) => (
@@ -387,15 +396,15 @@ export default function Home() {
                     <span className="truncate font-display text-lg font-bold text-ink">
                       {merchantByCode.get(bill.code) ||
                         bill.merchant ||
-                        `Bill ${bill.code}`}
+                        t("home.billNamed", { code: bill.code })}
                     </span>
                     <span className="text-xs font-medium text-ink-3">
-                      {new Date(bill.createdAt).toLocaleDateString()}
+                      {formatDate(bill.createdAt)}
                     </span>
                   </span>
                   {bill.total !== undefined && (
                     <span className="tabular font-display text-xl font-extrabold text-ink">
-                      ${(bill.total / 100).toFixed(2)}
+                      {formatMoney(bill.total)}
                     </span>
                   )}
                 </Link>

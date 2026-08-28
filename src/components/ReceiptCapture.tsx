@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
+import { useT } from "../lib/i18n/context";
 
 interface ReceiptCaptureProps {
   sessionId: Id<"sessions">;
@@ -20,6 +21,7 @@ export default function ReceiptCapture({
   onUpload,
   disabled = false,
 }: ReceiptCaptureProps) {
+  const t = useT();
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -66,9 +68,7 @@ export default function ReceiptCapture({
       console.error("Receipt upload failed:", error);
       // Surface the failure - previously this only reached the console, so the
       // button appeared to do nothing at all.
-      setUploadError(
-        "We couldn't upload that image. Check your connection and try again.",
-      );
+      setUploadError(t("capture.uploadFailed"));
     } finally {
       setIsUploading(false);
       // Reset file inputs after upload (success or failure)
@@ -130,7 +130,7 @@ export default function ReceiptCapture({
               clipRule="evenodd"
             />
           </svg>
-          {isUploading ? "Uploading..." : "Take Photo"}
+          {isUploading ? t("common.uploading") : t("capture.takePhoto")}
         </button>
         <button
           type="button"
@@ -151,7 +151,7 @@ export default function ReceiptCapture({
               clipRule="evenodd"
             />
           </svg>
-          {isUploading ? "Uploading..." : "Choose Image"}
+          {isUploading ? t("common.uploading") : t("capture.chooseImage")}
         </button>
       </div>
 

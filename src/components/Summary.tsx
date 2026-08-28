@@ -9,8 +9,11 @@ import PaymentSetup from "./PaymentSetup";
 import ReadyToggle from "./ReadyToggle";
 import SettleRow from "./SettleRow";
 import { buildSummaryText, shareSummary } from "../lib/shareSummary";
+import { useLocale } from "../lib/i18n/context";
+import { formatMoney } from "../lib/money";
 
 export default function Summary() {
+  const { t } = useLocale();
   const context: Context = useOutletContext();
   const {
     session,
@@ -21,7 +24,7 @@ export default function Summary() {
     secret,
   } = context;
 
-  useDocumentTitle("Totals");
+  useDocumentTitle(t("totals.documentTitle"));
 
   const totals = useQuery(api.participants.getTotals, {
     sessionId: session._id,
@@ -41,7 +44,7 @@ export default function Summary() {
           aria-hidden="true"
           className="mx-auto h-8 w-8 animate-spin rounded-full border-3 border-line-soft border-t-brand"
         ></div>
-        <p className="mt-3 text-ink-2">Loading totals...</p>
+        <p className="mt-3 text-ink-2">{t("totals.loading")}</p>
       </div>
     );
   }
@@ -63,18 +66,22 @@ export default function Summary() {
 
   async function handleShare() {
     const billUrl = `${window.location.origin}/bill/${session.code}`;
-    const text = buildSummaryText({
-      people: participants.map((p) => ({ name: p.name, total: p.total })),
-      merchant: session.merchant,
-      code: session.code,
-      billUrl,
-      unclaimedTotal,
-    });
+    const heading = session.merchant
+      ? t("share.headingMerchant", { merchant: session.merchant })
+      : t("share.heading");
 
-    const result = await shareSummary(
-      text,
-      session.merchant ? `Split for ${session.merchant}` : "Bill split",
+    const text = buildSummaryText(
+      {
+        people: participants.map((p) => ({ name: p.name, total: p.total })),
+        merchant: session.merchant,
+        code: session.code,
+        billUrl,
+        unclaimedTotal,
+      },
+      t,
     );
+
+    const result = await shareSummary(text, heading);
     // A native share sheet is its own confirmation; a silent clipboard write
     // is not, so only that case needs feedback.
     if (result === "copied" || result === "failed") {
@@ -95,7 +102,7 @@ export default function Summary() {
 
   return (
     <div className="space-y-3 p-4">
-      <h1 className="sr-only">Totals</h1>
+      <h1 className="sr-only">{t("totals.documentTitle")}</h1>
 
       {/* Unclaimed Warning */}
       {unclaimedItems.length > 0 && (
@@ -113,10 +120,9 @@ export default function Summary() {
             <path d="M12 8v5M12 17h.01" />
           </svg>
           <span className="text-sm font-semibold text-alert-ink">
-            {unclaimedItems.length} item{unclaimedItems.length > 1 ? "s" : ""}{" "}
-            still up for grabs —{" "}
+            {t("totals.unclaimedWarning", { count: unclaimedItems.length })}{" "}
             <span className="tabular font-bold">
-              ${(unclaimedTotal / 100).toFixed(2)}
+              {formatMoney(unclaimedTotal)}
             </span>
           </span>
         </div>
@@ -164,31 +170,31 @@ export default function Summary() {
                     </span>
                     {isCurrentUser && (
                       <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-page">
-                        You
+                        {t("totals.you")}
                       </span>
                     )}
                     {participant.isHost && (
                       <span className="rounded-full border-2 border-line px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-2">
-                        Host
+                        {t("totals.hostBadge")}
                       </span>
                     )}
                     {participant.isReady && (
                       <span
                         className="rounded-full border-2 border-line bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-2"
-                        title="Done claiming"
+                        title={t("totals.doneClaimingTitle")}
                       >
-                        ✓ Done
+                        {t("totals.doneBadge")}
                       </span>
                     )}
                     {participant.paidAt !== undefined && (
                       <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink">
-                        Settled
+                        {t("totals.settledBadge")}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     <span className="tabular font-display text-xl font-extrabold text-ink">
-                      ${(participant.total / 100).toFixed(2)}
+                      {formatMoney(participant.total)}
                     </span>
                     <svg
                       aria-hidden="true"
@@ -209,11 +215,21 @@ export default function Summary() {
 
                 {/* Breakdown Row */}
                 <div className="tabular mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-xs font-semibold text-ink-3">
-                  <span>Items ${(participant.subtotal / 100).toFixed(2)}</span>
                   <span>
-                    Taxes &amp; Fees ${(participant.tax / 100).toFixed(2)}
+                    {t("totals.itemsLine", {
+                      amount: formatMoney(participant.subtotal),
+                    })}
                   </span>
-                  <span>Tip ${(participant.tip / 100).toFixed(2)}</span>
+                  <span>
+                    {t("totals.feesLine", {
+                      amount: formatMoney(participant.tax),
+                    })}
+                  </span>
+                  <span>
+                    {t("totals.tipLine", {
+                      amount: formatMoney(participant.tip),
+                    })}
+                  </span>
                 </div>
               </button>
 
@@ -224,11 +240,11 @@ export default function Summary() {
                   className="mx-3.5 border-t-2 border-line-soft pb-3.5 pt-3"
                 >
                   <h2 className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-ink-3">
-                    Claimed Items
+                    {t("totals.claimedItems")}
                   </h2>
                   {participant.claimedItems.length === 0 ? (
                     <p className="text-sm italic text-ink-3">
-                      No items claimed yet
+                      {t("totals.noneClaimed")}
                     </p>
                   ) : (
                     <ul className="space-y-1">
@@ -241,12 +257,14 @@ export default function Summary() {
                             {item.itemName}
                             {item.claimCount > 1 && (
                               <span className="ml-1 text-ink-3">
-                                · split {item.claimCount}
+                                {t("totals.splitCount", {
+                                  count: item.claimCount,
+                                })}
                               </span>
                             )}
                           </span>
                           <span className="tabular font-bold text-ink">
-                            ${(item.sharePrice / 100).toFixed(2)}
+                            {formatMoney(item.sharePrice)}
                           </span>
                         </li>
                       ))}
@@ -267,7 +285,10 @@ export default function Summary() {
                         currentParticipantId={currentParticipantId}
                         isCurrentUser={isCurrentUser}
                         isHost={isHost}
-                        billLabel={session.merchant ?? `Bill ${session.code}`}
+                        billLabel={
+                          session.merchant ??
+                          t("home.billNamed", { code: session.code })
+                        }
                       />
                     )}
                     {isCurrentUser && (
@@ -291,16 +312,18 @@ export default function Summary() {
         <div className="flex items-center gap-3 rounded-card border-card border-total-line bg-total-bg p-4">
           <div className="flex flex-1 flex-col gap-0.5">
             <span className="font-display text-lg font-extrabold text-total-fg">
-              Table total
+              {t("totals.tableTotal")}
             </span>
             {unclaimedTotal > 0 && (
               <span className="tabular text-xs font-medium text-total-muted">
-                excludes ${(unclaimedTotal / 100).toFixed(2)} unclaimed
+                {t("totals.excludesUnclaimed", {
+                  amount: formatMoney(unclaimedTotal),
+                })}
               </span>
             )}
           </div>
           <span className="tabular font-display text-2xl font-extrabold text-accent">
-            ${(groupTotal / 100).toFixed(2)}
+            {formatMoney(groupTotal)}
           </span>
         </div>
       )}
@@ -316,12 +339,14 @@ export default function Summary() {
           />
           {notReady.length > 0 && (
             <p className="text-sm text-ink-2">
-              Still claiming: {notReady.map((p) => p.name).join(", ")}
+              {t("totals.stillClaiming", {
+                names: notReady.map((p) => p.name).join(", "),
+              })}
             </p>
           )}
           {notReady.length === 0 && participants.length > 1 && (
             <p className="text-sm font-bold text-ink">
-              Everyone's done claiming — these totals are final.
+              {t("totals.everyoneDone")}
             </p>
           )}
         </div>
@@ -336,10 +361,10 @@ export default function Summary() {
             className="min-h-12 w-full rounded-card border-card border-line bg-accent px-4 py-3 font-display text-lg font-extrabold text-accent-ink shadow-hard transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-1 active:translate-y-1 active:shadow-none"
           >
             {shareState === "copied"
-              ? "Copied to clipboard"
+              ? t("totals.shareCopied")
               : shareState === "failed"
-                ? "Couldn't share — try again"
-                : "Share the split"}
+                ? t("totals.shareFailed")
+                : t("totals.share")}
           </button>
 
           {isHost && (
@@ -348,13 +373,12 @@ export default function Summary() {
               onClick={handleToggleLock}
               className="min-h-12 w-full rounded-card border-card border-line bg-surface px-4 py-3 font-bold text-ink transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-y-px"
             >
-              {isLocked ? "Unlock this bill" : "Lock this bill"}
+              {isLocked ? t("totals.unlockBill") : t("totals.lockBill")}
             </button>
           )}
           {isHost && !isLocked && (
             <p className="text-center text-xs text-ink-3">
-              Locking freezes items and claims so nothing changes after people
-              pay.
+              {t("totals.lockingExplainer")}
             </p>
           )}
         </div>
@@ -363,7 +387,7 @@ export default function Summary() {
       {/* Empty State */}
       {participants.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-ink-3">No participants yet</p>
+          <p className="text-ink-3">{t("totals.noParticipants")}</p>
         </div>
       )}
     </div>

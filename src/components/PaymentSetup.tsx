@@ -3,10 +3,11 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id } from "../../convex/_generated/dataModel";
 import {
-  PAYMENT_METHOD_LABELS,
   PaymentMethod,
   formatHandle,
+  paymentMethodLabel,
 } from "../lib/paymentLinks";
+import { useT } from "../lib/i18n/context";
 
 interface PaymentSetupProps {
   participantId: Id<"participants">;
@@ -31,6 +32,7 @@ export default function PaymentSetup({
   currentMethod,
   currentHandle,
 }: PaymentSetupProps) {
+  const t = useT();
   const setPaymentInfo = useMutation(api.participants.setPaymentInfo);
 
   const [isEditing, setIsEditing] = useState(false);
@@ -56,7 +58,7 @@ export default function PaymentSetup({
           ? // Convex prefixes thrown errors with server context that means
             // nothing to a person staring at a text field.
             err.message.split("Uncaught Error:").pop()!.trim()
-          : "Could not save that handle.",
+          : t("settle.couldNotSave"),
       );
     } finally {
       setIsSaving(false);
@@ -83,8 +85,14 @@ export default function PaymentSetup({
         className="min-h-11 text-sm font-bold text-ink underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         {currentHandle && currentMethod
-          ? `Paid via ${PAYMENT_METHOD_LABELS[currentMethod]} ${formatHandle(currentMethod, currentHandle)} — change`
-          : "+ Add how you get paid back"}
+          ? t("settle.paidViaChange", {
+              method: paymentMethodLabel(
+                currentMethod,
+                t("settle.methodOther"),
+              ),
+              handle: formatHandle(currentMethod, currentHandle),
+            })
+          : t("settle.addHandle")}
       </button>
     );
   }
@@ -104,21 +112,27 @@ export default function PaymentSetup({
                 : "bg-surface text-ink-2 active:translate-y-px"
             }`}
           >
-            {PAYMENT_METHOD_LABELS[option]}
+            {paymentMethodLabel(option, t("settle.methodOther"))}
           </button>
         ))}
       </div>
 
       <div className="flex gap-2">
         <label className="sr-only" htmlFor={`handle-${participantId}`}>
-          Your {PAYMENT_METHOD_LABELS[method]} handle
+          {t("settle.handleLabel", {
+            method: paymentMethodLabel(method, t("settle.methodOther")),
+          })}
         </label>
         <input
           id={`handle-${participantId}`}
           type="text"
           value={handle}
           onChange={(e) => setHandle(e.target.value)}
-          placeholder={method === "paypal" ? "your-paypal-name" : "your-handle"}
+          placeholder={
+            method === "paypal"
+              ? t("settle.paypalPlaceholder")
+              : t("settle.handlePlaceholder")
+          }
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
@@ -130,7 +144,7 @@ export default function PaymentSetup({
           disabled={isSaving || handle.trim() === ""}
           className="min-h-11 rounded-full border-2 border-line bg-accent px-4 font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:border-ink-4 disabled:bg-surface disabled:text-ink-4 disabled:shadow-none"
         >
-          Save
+          {t("common.save")}
         </button>
       </div>
 
@@ -146,7 +160,7 @@ export default function PaymentSetup({
           }}
           className="min-h-11 font-semibold text-ink-2 underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
-          Cancel
+          {t("common.cancel")}
         </button>
         {currentHandle && (
           <button
@@ -155,7 +169,7 @@ export default function PaymentSetup({
             disabled={isSaving}
             className="min-h-11 font-semibold text-alert underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
-            Remove
+            {t("common.remove")}
           </button>
         )}
       </div>

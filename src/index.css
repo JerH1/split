@@ -163,8 +163,15 @@
 }
 
 @theme {
-  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Baloo 2", "Figtree", ui-sans-serif, system-ui, sans-serif;
+  /* Noto Sans Thai sits after the Latin faces rather than in front of them.
+     Neither Figtree nor Baloo 2 has Thai glyphs, so the browser falls through
+     to Noto per-character exactly on the Thai runs and keeps Latin text in the
+     brand faces — including in a bill where a Thai UI holds an item named in
+     English. Putting it first would restyle every language. */
+  --font-sans:
+    "Figtree", "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    "Baloo 2", "Figtree", "Noto Sans Thai", ui-sans-serif, system-ui, sans-serif;
 
   --radius-card: 18px;
   --radius-tile: 16px;

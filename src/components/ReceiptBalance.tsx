@@ -1,4 +1,6 @@
 import { Doc } from "../../convex/_generated/dataModel";
+import { useT } from "../lib/i18n/context";
+import { formatMoneyAbs } from "../lib/money";
 
 interface ReceiptBalanceProps {
   /** Grand total printed on the receipt, in cents. */
@@ -13,10 +15,6 @@ interface ReceiptBalanceProps {
 // line, which is worth interrupting for.
 const TOLERANCE_CENTS = 2;
 
-function formatCents(cents: number): string {
-  return `$${(Math.abs(cents) / 100).toFixed(2)}`;
-}
-
 /**
  * Warn when the parsed items do not add up to the total printed on the receipt.
  *
@@ -30,6 +28,8 @@ export default function ReceiptBalance({
   itemsSubtotal,
   fees,
 }: ReceiptBalanceProps) {
+  const t = useT();
+
   // No receipt total means no receipt was parsed, or the model could not read
   // one. Either way there is nothing to check against.
   if (receiptTotal === undefined) return null;
@@ -48,16 +48,16 @@ export default function ReceiptBalance({
       className="rounded-card border-card border-alert bg-alert-tint p-3 text-sm"
     >
       <p className="font-bold text-alert-ink">
-        {isMissing
-          ? `${formatCents(difference)} of this receipt isn't accounted for`
-          : `Items add up to ${formatCents(difference)} more than the receipt`}
+        {t(isMissing ? "balance.missingTitle" : "balance.extraTitle", {
+          amount: formatMoneyAbs(difference),
+        })}
       </p>
       <p className="mt-1 text-ink-2">
-        Receipt total {formatCents(receiptTotal)}, but items and fees come to{" "}
-        {formatCents(accountedFor)}.{" "}
-        {isMissing
-          ? "Something may have been missed when the photo was read - check for a line that didn't make it."
-          : "A line may have been read twice, or a price misread."}
+        {t("balance.body", {
+          receiptTotal: formatMoneyAbs(receiptTotal),
+          accountedFor: formatMoneyAbs(accountedFor),
+        })}{" "}
+        {t(isMissing ? "balance.missingHint" : "balance.extraHint")}
       </p>
     </div>
   );

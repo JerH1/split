@@ -15,6 +15,18 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   other: "Other",
 };
 
+/**
+ * The name shown for a method. The three services are brands and read the same
+ * in every language; only "Other" is a word, so the caller passes in its
+ * translation rather than this module reaching for a React hook.
+ */
+export function paymentMethodLabel(
+  method: PaymentMethod,
+  otherLabel: string,
+): string {
+  return method === "other" ? otherLabel : PAYMENT_METHOD_LABELS[method];
+}
+
 /** How a handle is written when shown back to a person, per service convention. */
 export function formatHandle(method: PaymentMethod, handle: string): string {
   switch (method) {
