@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { assertSessionOpen } from "./locking";
 
 // List all claims in a session (with item and participant details)
 export const listBySession = query({
@@ -49,6 +50,7 @@ export const claim = mutation({
     if (!participant || participant.sessionId !== args.sessionId) {
       throw new Error("Not authorized to claim items in this session");
     }
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Check if already claimed by this participant
     const existing = await ctx.db
@@ -90,6 +92,7 @@ export const unclaim = mutation({
     if (!isUnclaimingSelf && !isHost) {
       throw new Error("Not authorized to unclaim for this participant");
     }
+    await assertSessionOpen(ctx, callerParticipant.sessionId);
 
     const claim = await ctx.db
       .query("claims")
@@ -125,6 +128,7 @@ export const unclaimByHost = mutation({
     if (host.sessionId !== item.sessionId) {
       throw new Error("Host not in this session");
     }
+    await assertSessionOpen(ctx, item.sessionId);
 
     // Find and delete the claim
     const claim = await ctx.db
@@ -134,6 +138,85 @@ export const unclaimByHost = mutation({
       .first();
 
     if (claim) {
+      await ctx.db.delete(claim._id);
+    }
+  },
+});
+
+// Claim one item on behalf of everyone in the session.
+//
+// The shared-appetizer case. Without this, splitting a bottle of wine five ways
+// means five people each hunting down the same row, and the split is silently
+// wrong until the last one gets there.
+export const claimForEveryone = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    itemId: v.id("items"),
+    participantId: v.id("participants"),
+  },
+  handler: async (ctx, args) => {
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant || participant.sessionId !== args.sessionId) {
+      throw new Error("Not authorized to claim items in this session");
+    }
+    await assertSessionOpen(ctx, args.sessionId);
+
+    const item = await ctx.db.get(args.itemId);
+    if (!item || item.sessionId !== args.sessionId) {
+      throw new Error("Item not found in this session");
+    }
+
+    const participants = await ctx.db
+      .query("participants")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+
+    const existingClaims = await ctx.db
+      .query("claims")
+      .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
+      .collect();
+    const alreadyClaimed = new Set(
+      existingClaims.map((claim) => claim.participantId),
+    );
+
+    for (const person of participants) {
+      if (alreadyClaimed.has(person._id)) continue;
+      await ctx.db.insert("claims", {
+        sessionId: args.sessionId,
+        itemId: args.itemId,
+        participantId: person._id,
+      });
+    }
+  },
+});
+
+// Drop every claim on an item, whoever made them.
+//
+// The undo for claimForEveryone. Removing five claims one at a time would mean
+// five round trips and an item that is briefly split four ways at each step.
+export const unclaimEveryone = mutation({
+  args: {
+    itemId: v.id("items"),
+    participantId: v.id("participants"),
+  },
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get(args.itemId);
+    if (!item) {
+      throw new Error("Item not found");
+    }
+
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant || participant.sessionId !== item.sessionId) {
+      throw new Error("Not authorized to unclaim items in this session");
+    }
+    await assertSessionOpen(ctx, item.sessionId);
+
+    const claims = await ctx.db
+      .query("claims")
+      .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
+      .collect();
+
+    for (const claim of claims) {
       await ctx.db.delete(claim._id);
     }
   },

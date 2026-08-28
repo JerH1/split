@@ -5,6 +5,7 @@ import {
   validateMoney,
   validateQuantity,
 } from "./validation";
+import { assertSessionOpen } from "./locking";
 
 // List all items in a session
 export const listBySession = query({
@@ -33,11 +34,8 @@ export const add = mutation({
       throw new Error("Not authorized to add items to this session");
     }
 
-    // Verify session exists
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) {
-      throw new Error("Session not found");
-    }
+    // Verify session exists and is still open to changes
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Validate inputs
     const validatedName = validateItemName(args.name);
@@ -70,10 +68,7 @@ export const update = mutation({
     if (!item) {
       throw new Error("Item not found");
     }
-    const session = await ctx.db.get(item.sessionId);
-    if (!session) {
-      throw new Error("Session not found");
-    }
+    await assertSessionOpen(ctx, item.sessionId);
 
     // Verify participant exists and belongs to item's session
     const participant = await ctx.db.get(args.participantId);
@@ -120,6 +115,7 @@ export const remove = mutation({
     if (participant.sessionId !== item.sessionId) {
       throw new Error("Participant not in this session");
     }
+    await assertSessionOpen(ctx, item.sessionId);
 
     // Delete all claims for this item
     const claims = await ctx.db
@@ -164,6 +160,7 @@ export const addBulk = mutation({
     if (participant.sessionId !== args.sessionId) {
       throw new Error("Participant not in this session");
     }
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Validate all items before making any changes
     const validatedItems = args.items.map((item) => ({

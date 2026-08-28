@@ -20,6 +20,8 @@ export default defineSchema({
       ),
     ),
     tipValue: v.optional(v.number()), // Percentage or dollar amount
+    receiptTotal: v.optional(v.number()), // Grand total parsed from receipt, for reconciliation
+    lockedAt: v.optional(v.number()), // Set when the host freezes the bill; undefined means open
   }).index("by_code", ["code"]), // Lookup sessions by share code
 
   // Participants are people in a session
@@ -28,6 +30,19 @@ export default defineSchema({
     name: v.string(), // Display name
     isHost: v.boolean(), // Host has extra controls
     joinedAt: v.number(), // Unix timestamp
+    // How this person wants to be paid back. Both fields are set together or
+    // not at all - a handle without a method has nowhere to link to.
+    paymentMethod: v.optional(
+      v.union(
+        v.literal("venmo"),
+        v.literal("cashapp"),
+        v.literal("paypal"),
+        v.literal("other"),
+      ),
+    ),
+    paymentHandle: v.optional(v.string()), // Username/email, stored without a leading @
+    isReady: v.optional(v.boolean()), // "I'm done claiming" - undefined means not ready
+    paidAt: v.optional(v.number()), // Set when this person's share is settled
   }).index("by_session", ["sessionId"]), // List participants in a session
 
   // Items are line items from the receipt

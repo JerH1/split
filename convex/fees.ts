@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { validateMoney } from "./validation";
+import { assertSessionOpen } from "./locking";
 
 // Max label length for fee labels
 const MAX_FEE_LABEL_LENGTH = 100;
@@ -55,6 +56,7 @@ export const add = mutation({
     if (participant.sessionId !== args.sessionId) {
       throw new Error("Participant not in this session");
     }
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Validate inputs
     const validatedLabel = validateFeeLabel(args.label);
@@ -97,6 +99,7 @@ export const addBulk = mutation({
     if (participant.sessionId !== args.sessionId) {
       throw new Error("Participant not in this session");
     }
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Validate all fees before making any changes
     const validatedFees = args.fees.map((fee) => ({
@@ -153,6 +156,7 @@ export const update = mutation({
     if (participant.sessionId !== fee.sessionId) {
       throw new Error("Participant not in this session");
     }
+    await assertSessionOpen(ctx, fee.sessionId);
 
     // Validate and build updates
     const updates: Record<string, unknown> = {};
@@ -190,6 +194,7 @@ export const remove = mutation({
     if (participant.sessionId !== fee.sessionId) {
       throw new Error("Participant not in this session");
     }
+    await assertSessionOpen(ctx, fee.sessionId);
 
     await ctx.db.delete(args.feeId);
   },

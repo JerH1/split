@@ -13,6 +13,7 @@ import type * as calculations from "../calculations.js";
 import type * as claims from "../claims.js";
 import type * as fees from "../fees.js";
 import type * as items from "../items.js";
+import type * as locking from "../locking.js";
 import type * as participants from "../participants.js";
 import type * as receipts from "../receipts.js";
 import type * as sessions from "../sessions.js";
@@ -31,6 +32,7 @@ declare const fullApi: ApiFromModules<{
   claims: typeof claims;
   fees: typeof fees;
   items: typeof items;
+  locking: typeof locking;
   participants: typeof participants;
   receipts: typeof receipts;
   sessions: typeof sessions;

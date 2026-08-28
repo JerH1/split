@@ -1,6 +1,7 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { validateName, validateMoney, validateTipPercent } from "./validation";
+import { assertSessionOpen } from "./locking";
 
 // Generate a random 6-character alphanumeric code
 function generateCode(): string {
@@ -90,6 +91,7 @@ export const updateTip = mutation({
     if (participant.sessionId !== args.sessionId) {
       throw new Error("Participant not in this session");
     }
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Validate tip value based on type
     let validatedTipValue: number;
@@ -122,6 +124,8 @@ export const updateTax = mutation({
       throw new Error("Participant not in this session");
     }
 
+    await assertSessionOpen(ctx, args.sessionId);
+
     // Validate tax amount
     const validatedTax = validateMoney(args.tax, "Tax");
 
@@ -145,6 +149,64 @@ export const updateMerchant = mutation({
       throw new Error("Participant not in this session");
     }
 
+    await assertSessionOpen(ctx, args.sessionId);
+
     await ctx.db.patch(args.sessionId, { merchant: args.merchant });
+  },
+});
+
+// Record the grand total printed on the receipt (host only).
+//
+// Kept separate from the item list so the summary can compare what the receipt
+// says against what the items actually add up to. A mismatch means OCR dropped
+// or misread something, and the group is about to split the wrong number.
+export const updateReceiptTotal = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    participantId: v.id("participants"),
+    receiptTotal: v.number(), // in cents
+  },
+  handler: async (ctx, args) => {
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant || !participant.isHost) {
+      throw new Error("Only the host can modify bill settings");
+    }
+    if (participant.sessionId !== args.sessionId) {
+      throw new Error("Participant not in this session");
+    }
+    await assertSessionOpen(ctx, args.sessionId);
+
+    const validatedTotal = validateMoney(args.receiptTotal, "Receipt total");
+    await ctx.db.patch(args.sessionId, { receiptTotal: validatedTotal });
+  },
+});
+
+// Lock or unlock the bill (host only).
+//
+// Deliberately not guarded by assertSessionOpen: unlocking a locked bill is the
+// one change that has to work while it is locked.
+export const setLocked = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    participantId: v.id("participants"),
+    locked: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant || !participant.isHost) {
+      throw new Error("Only the host can lock this bill");
+    }
+    if (participant.sessionId !== args.sessionId) {
+      throw new Error("Participant not in this session");
+    }
+
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) {
+      throw new Error("Session not found");
+    }
+
+    await ctx.db.patch(args.sessionId, {
+      lockedAt: args.locked ? Date.now() : undefined,
+    });
   },
 });

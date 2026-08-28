@@ -5,8 +5,10 @@ import {
   calculateItemShare,
   calculateTipShare,
   distributeWithRemainder,
+  lineTotal,
 } from "./calculations";
-import { validateName } from "./validation";
+import { validateName, validatePaymentHandle } from "./validation";
+import { assertSessionOpen } from "./locking";
 
 // List all participants in a session
 export const listBySession = query({
@@ -199,13 +201,13 @@ export const getTotals = query({
         unclaimedItems.push({
           itemId: item._id,
           itemName: item.name,
-          price: item.price,
+          price: lineTotal(item),
         });
         continue;
       }
 
       // Calculate shares for this item
-      const shares = calculateItemShare(item.price, claimants.length);
+      const shares = calculateItemShare(lineTotal(item), claimants.length);
 
       // Add to each claimant's totals
       for (let i = 0; i < claimants.length; i++) {
@@ -224,7 +226,7 @@ export const getTotals = query({
         }
       }
 
-      groupSubtotal += item.price;
+      groupSubtotal += lineTotal(item);
     }
 
     // 4. Get fees from fees table (or fall back to legacy session.tax)
@@ -261,7 +263,7 @@ export const getTotals = query({
     );
 
     // Calculate total bill subtotal (all items, claimed or not)
-    const billSubtotal = items.reduce((sum, item) => sum + item.price, 0);
+    const billSubtotal = items.reduce((sum, item) => sum + lineTotal(item), 0);
     const claimedSubtotal = participantSubtotals.reduce((sum, s) => sum + s, 0);
     const unclaimedSubtotal = billSubtotal - claimedSubtotal;
 
@@ -325,6 +327,10 @@ export const getTotals = query({
         tip,
         total: data.subtotal + tax + tip, // subtotal + fees + tip
         claimedItems: data.claimedItems,
+        paymentMethod: participant.paymentMethod,
+        paymentHandle: participant.paymentHandle,
+        isReady: participant.isReady === true,
+        paidAt: participant.paidAt,
       };
     });
 
@@ -343,5 +349,106 @@ export const getTotals = query({
       tipValue,
       fees, // NEW: Array of fees for UI display
     };
+  },
+});
+
+// Set how this person wants to be paid back.
+//
+// Self-service only. There is no account system, so holding a participant ID is
+// what it means to be that person - the same trust model the rest of the app
+// runs on - but nobody should be able to redirect someone else's repayment to
+// their own handle, which is what a host override here would allow.
+export const setPaymentInfo = mutation({
+  args: {
+    participantId: v.id("participants"),
+    paymentMethod: v.optional(
+      v.union(
+        v.literal("venmo"),
+        v.literal("cashapp"),
+        v.literal("paypal"),
+        v.literal("other"),
+      ),
+    ),
+    paymentHandle: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant) {
+      throw new Error("Participant not found");
+    }
+
+    // Clearing one field clears both: a handle with no method has nowhere to
+    // link to, and a method with no handle names no one.
+    const hasHandle =
+      args.paymentHandle !== undefined && args.paymentHandle.trim() !== "";
+    if (!hasHandle || args.paymentMethod === undefined) {
+      await ctx.db.patch(args.participantId, {
+        paymentMethod: undefined,
+        paymentHandle: undefined,
+      });
+      return;
+    }
+
+    await ctx.db.patch(args.participantId, {
+      paymentMethod: args.paymentMethod,
+      paymentHandle: validatePaymentHandle(args.paymentHandle!),
+    });
+  },
+});
+
+// Mark yourself done claiming (or change your mind).
+//
+// Purely advisory - it does not freeze anything. It exists so the host can tell
+// the difference between "nobody claimed the fries" and "someone is still
+// scrolling", which the unclaimed-item count alone cannot express.
+export const setReady = mutation({
+  args: {
+    participantId: v.id("participants"),
+    isReady: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const participant = await ctx.db.get(args.participantId);
+    if (!participant) {
+      throw new Error("Participant not found");
+    }
+    await assertSessionOpen(ctx, participant.sessionId);
+
+    await ctx.db.patch(args.participantId, { isReady: args.isReady });
+  },
+});
+
+// Mark a share as settled.
+//
+// Allowed while the bill is locked: locking is what happens when a bill is
+// ready to be paid, so settlement has to keep working afterwards.
+export const setPaid = mutation({
+  args: {
+    participantId: v.id("participants"),
+    callerParticipantId: v.id("participants"),
+    paid: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const target = await ctx.db.get(args.participantId);
+    if (!target) {
+      throw new Error("Participant not found");
+    }
+
+    const caller = await ctx.db.get(args.callerParticipantId);
+    if (!caller) {
+      throw new Error("Caller participant not found");
+    }
+    if (caller.sessionId !== target.sessionId) {
+      throw new Error("Not authorized to update this participant");
+    }
+
+    // You can settle your own share; the host confirms everyone else's.
+    const isSelf = args.callerParticipantId === args.participantId;
+    if (!isSelf && caller.isHost !== true) {
+      throw new Error("Not authorized to update this participant");
+    }
+
+    await ctx.db.patch(args.participantId, {
+      paidAt: args.paid ? Date.now() : undefined,
+    });
   },
 });

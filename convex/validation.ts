@@ -83,3 +83,31 @@ export function validateTipPercent(percent: number): number {
   }
   return percent;
 }
+
+// Payment handles end up inside a URL (venmo.com/..., cash.app/$..., paypal.me/...),
+// so anything that could change the shape of that URL - slashes, whitespace,
+// query separators - has to be rejected rather than escaped. The remaining
+// character set covers every handle the supported services actually allow.
+export const MAX_PAYMENT_HANDLE_LENGTH = 64;
+
+const PAYMENT_HANDLE_PATTERN = /^[A-Za-z0-9._+-]+$/;
+
+export function validatePaymentHandle(handle: string): string {
+  // A leading @ is how people write their own handle, but it is never part of
+  // the value the payment URLs expect.
+  const trimmed = handle.trim().replace(/^@+/, "");
+  if (trimmed.length === 0) {
+    throw new Error("Payment handle cannot be empty");
+  }
+  if (trimmed.length > MAX_PAYMENT_HANDLE_LENGTH) {
+    throw new Error(
+      `Payment handle cannot exceed ${MAX_PAYMENT_HANDLE_LENGTH} characters`,
+    );
+  }
+  if (!PAYMENT_HANDLE_PATTERN.test(trimmed)) {
+    throw new Error(
+      "Payment handle can only contain letters, numbers, and . _ + -",
+    );
+  }
+  return trimmed;
+}
