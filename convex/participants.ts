@@ -6,24 +6,50 @@ import {
   calculateTipShare,
   distributeWithRemainder,
 } from "./calculations";
-import { validateName } from "./validation";
+import { requireParticipant, toPublicParticipant } from "./auth";
+import { randomSecret } from "./random";
+import {
+  MAX_PARTICIPANTS_PER_SESSION,
+  normalizeNameForCompare,
+  validateName,
+} from "./validation";
 
-// List all participants in a session
+// List all participants in a session.
+// This result is broadcast to every client in the session, so it must never
+// carry participant secrets - see convex/auth.ts.
 export const listBySession = query({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const participants = await ctx.db
       .query("participants")
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .collect();
+    return participants.map(toPublicParticipant);
   },
 });
 
-// Get a participant by ID (for session restoration)
-export const getById = query({
-  args: { participantId: v.id("participants") },
+// Resolve the caller's own participant record from their stored credentials.
+// Backs session restoration: the client holds an ID and a secret from a
+// previous visit and needs to know whether they still work.
+//
+// Returns null rather than throwing so a stale or forged credential renders as
+// "you need to join" instead of an error screen.
+export const me = query({
+  args: {
+    participantId: v.id("participants"),
+    secret: v.string(),
+  },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.participantId);
+    try {
+      const participant = await requireParticipant(
+        ctx,
+        args.participantId,
+        args.secret,
+      );
+      return toPublicParticipant(participant);
+    } catch {
+      return null;
+    }
   },
 });
 
@@ -51,9 +77,20 @@ export const join = mutation({
       .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
       .collect();
 
-    const nameLower = validatedName.toLowerCase();
+    // Anyone holding the code can join, so cap the roster. Otherwise a single
+    // caller can inflate it until every session-scoped query is slow for the
+    // people actually splitting the bill.
+    if (existingParticipants.length >= MAX_PARTICIPANTS_PER_SESSION) {
+      throw new Error(
+        `This bill is full (max ${MAX_PARTICIPANTS_PER_SESSION} people)`,
+      );
+    }
+
+    // Compare on the normalized form so a second "Alice" cannot join by
+    // spelling the name with lookalike code points.
+    const nameKey = normalizeNameForCompare(validatedName);
     const duplicate = existingParticipants.find(
-      (p) => p.name.toLowerCase() === nameLower,
+      (p) => normalizeNameForCompare(p.name) === nameKey,
     );
 
     if (duplicate) {
@@ -62,13 +99,16 @@ export const join = mutation({
       );
     }
 
+    const secret = randomSecret();
     const participantId = await ctx.db.insert("participants", {
       sessionId: args.sessionId,
       name: validatedName,
       isHost: false,
       joinedAt: Date.now(),
+      secret,
     });
-    return participantId;
+    // The secret is returned exactly once, here.
+    return { participantId, secret };
   },
 });
 
@@ -78,18 +118,22 @@ export const updateName = mutation({
     participantId: v.id("participants"),
     name: v.string(),
     callerParticipantId: v.id("participants"),
+    secret: v.string(),
   },
   handler: async (ctx, args) => {
+    // Authenticate the caller before looking at anything else. Without this,
+    // naming a caller ID was enough to become them - and every ID in the
+    // session is public.
+    const callerParticipant = await requireParticipant(
+      ctx,
+      args.callerParticipantId,
+      args.secret,
+    );
+
     // Get the target participant
     const targetParticipant = await ctx.db.get(args.participantId);
     if (!targetParticipant) {
       throw new Error("Participant not found");
-    }
-
-    // Get the caller's participant record
-    const callerParticipant = await ctx.db.get(args.callerParticipantId);
-    if (!callerParticipant) {
-      throw new Error("Caller participant not found");
     }
 
     // Verify caller is in the same session as target
@@ -108,7 +152,7 @@ export const updateName = mutation({
     // Validate and trim name
     const validatedName = validateName(args.name, "Name");
 
-    // Check for duplicate names (case-insensitive)
+    // Check for duplicate names (normalized, so lookalike spellings collide)
     const existingParticipants = await ctx.db
       .query("participants")
       .withIndex("by_session", (q) =>
@@ -116,9 +160,11 @@ export const updateName = mutation({
       )
       .collect();
 
-    const nameLower = validatedName.toLowerCase();
+    const nameKey = normalizeNameForCompare(validatedName);
     const duplicate = existingParticipants.find(
-      (p) => p.name.toLowerCase() === nameLower && p._id !== args.participantId,
+      (p) =>
+        normalizeNameForCompare(p.name) === nameKey &&
+        p._id !== args.participantId,
     );
 
     if (duplicate) {

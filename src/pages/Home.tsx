@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate, Link } from "react-router";
 import { api } from "../../convex/_generated/api";
@@ -7,15 +7,20 @@ import {
   getStoredParticipant,
   storeParticipant,
   clearParticipant,
+  StoredCredentials,
 } from "../lib/sessionStorage";
 import {
   addBillToHistory,
   getBillHistory,
+  updateMerchantNameInBillHistory,
   BillHistoryEntry,
 } from "../lib/billHistory";
 import { getLastUsedName, setLastUsedName } from "../lib/userPreferences";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
 
 export default function Home() {
+  useDocumentTitle();
+
   // Unified name state (used for both create and join)
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -23,9 +28,8 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [isCheckingStored, setIsCheckingStored] = useState(false);
-  const [storedParticipantId, setStoredParticipantId] = useState<string | null>(
-    null,
-  );
+  const [storedCredentials, setStoredCredentials] =
+    useState<StoredCredentials | null>(null);
 
   const navigate = useNavigate();
   const createSession = useMutation(api.sessions.create);
@@ -45,28 +49,32 @@ export default function Home() {
     }
   }, []);
 
-  // Check localStorage for stored participant when session is found
+  // Check localStorage for stored credentials when session is found
   useEffect(() => {
     if (joinSession && code.length >= 6) {
       const stored = getStoredParticipant(code);
       if (stored) {
-        setStoredParticipantId(stored);
+        setStoredCredentials(stored);
         setIsCheckingStored(true);
       } else {
-        setStoredParticipantId(null);
+        setStoredCredentials(null);
         setIsCheckingStored(false);
       }
     } else {
-      setStoredParticipantId(null);
+      setStoredCredentials(null);
       setIsCheckingStored(false);
     }
   }, [joinSession, code]);
 
-  // Query stored participant to verify it still exists
+  // Verify the stored credentials still authenticate. The server returns null
+  // for anything stale or forged, which falls through to the join flow below.
   const storedParticipant = useQuery(
-    api.participants.getById,
-    storedParticipantId
-      ? { participantId: storedParticipantId as Id<"participants"> }
+    api.participants.me,
+    storedCredentials
+      ? {
+          participantId: storedCredentials.participantId as Id<"participants">,
+          secret: storedCredentials.secret,
+        }
       : "skip",
   );
 
@@ -79,12 +87,12 @@ export default function Home() {
       joinSession &&
       storedParticipant.sessionId === joinSession._id
     ) {
-      // Participant exists and belongs to this session - auto-redirect
+      // Credentials still valid for this session - auto-redirect
       navigate(`/bill/${code}/items`);
     } else {
-      // Participant doesn't exist or belongs to different session - clear storage
+      // Credentials rejected, or they belong to a different session
       clearParticipant(code);
-      setStoredParticipantId(null);
+      setStoredCredentials(null);
       setIsCheckingStored(false);
     }
   }, [storedParticipant, isCheckingStored, joinSession, code, navigate]);
@@ -93,6 +101,45 @@ export default function Home() {
   useEffect(() => {
     setHistory(getBillHistory());
   }, []);
+
+  // The merchant name is only written to local history on the device that
+  // uploaded the receipt, so read it from the sessions themselves instead.
+  const historyCodes = useMemo(
+    () => history.map((bill) => bill.code),
+    [history],
+  );
+  const historySessions = useQuery(
+    api.sessions.listByCodes,
+    historyCodes.length > 0 ? { codes: historyCodes } : "skip",
+  );
+
+  const merchantByCode = useMemo(() => {
+    const byCode = new Map<string, string>();
+    for (const session of historySessions ?? []) {
+      if (session.merchant) {
+        byCode.set(session.code, session.merchant);
+      }
+    }
+    return byCode;
+  }, [historySessions]);
+
+  // Cache what we learned so the list still reads correctly offline
+  useEffect(() => {
+    if (!historySessions) return;
+
+    let updated = false;
+    for (const session of historySessions) {
+      if (!session.merchant) continue;
+      const entry = getBillHistory().find((bill) => bill.code === session.code);
+      if (entry && entry.merchant !== session.merchant) {
+        updateMerchantNameInBillHistory(session.code, session.merchant);
+        updated = true;
+      }
+    }
+    if (updated) {
+      setHistory(getBillHistory());
+    }
+  }, [historySessions]);
 
   // Determine session state
   const isValidCode = code.length >= 6;
@@ -106,7 +153,8 @@ export default function Home() {
     name.trim().length > 0 && !isSubmitting && !isCheckingStored;
 
   // Handle form submission
-  async function handleSubmit() {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     if (!name.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
@@ -115,12 +163,12 @@ export default function Home() {
     try {
       if (isJoinMode && joinSession) {
         // Join existing bill
-        const participantId = await joinSessionMutation({
+        const { participantId, secret } = await joinSessionMutation({
           sessionId: joinSession._id,
           name: name.trim(),
         });
-        // Store participant ID for session restoration on future visits
-        storeParticipant(joinSession.code, participantId);
+        // Store credentials for session restoration on future visits
+        storeParticipant(joinSession.code, { participantId, secret });
         // Save name for future pre-fill
         setLastUsedName(name.trim());
         // Add to bill history for quick access
@@ -132,11 +180,18 @@ export default function Home() {
         navigate(`/bill/${joinSession.code}/items`);
       } else {
         // Create new bill
-        const { code: newCode, hostParticipantId } = await createSession({
+        const {
+          code: newCode,
+          hostParticipantId,
+          hostSecret,
+        } = await createSession({
           hostName: name.trim(),
         });
-        // Store host's participant ID for session persistence (enables claiming items)
-        storeParticipant(newCode, hostParticipantId);
+        // Store host credentials for session persistence (enables claiming items)
+        storeParticipant(newCode, {
+          participantId: hostParticipantId,
+          secret: hostSecret,
+        });
         // Save name for future pre-fill
         setLastUsedName(name.trim());
         // Add to bill history for quick access
@@ -161,12 +216,6 @@ export default function Home() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && canSubmit) {
-      handleSubmit();
-    }
-  };
-
   // Button text and style
   const buttonText = isSubmitting
     ? isJoinMode
@@ -187,13 +236,13 @@ export default function Home() {
         {/* App branding */}
         <div className="space-y-2">
           <h1 className="text-4xl font-bold text-gray-900">Split</h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-gray-700">
             Split bills with friends, instantly.
           </p>
         </div>
 
         {/* Unified form */}
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name input */}
           <div className="space-y-2">
             <label
@@ -207,11 +256,10 @@ export default function Home() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={handleKeyDown}
               placeholder="Enter your name"
               autoComplete="name"
               autoCapitalize="words"
-              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-3 text-lg border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
             />
           </div>
 
@@ -222,7 +270,7 @@ export default function Home() {
               className="block text-sm font-medium text-gray-700 text-left"
             >
               Bill code{" "}
-              <span className="text-gray-400 font-normal">(optional)</span>
+              <span className="text-gray-600 font-normal">(optional)</span>
             </label>
             <input
               id="code"
@@ -235,53 +283,60 @@ export default function Home() {
               placeholder="ABC123"
               maxLength={6}
               autoComplete="off"
-              className="w-full px-4 py-3 text-lg font-mono tracking-widest text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+              aria-describedby="code-status"
+              className="w-full px-4 py-3 text-lg font-mono tracking-widest text-center border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent uppercase"
             />
-            {/* Code status message */}
-            {isValidCode && (
-              <p
-                className={`text-sm ${
-                  sessionFound
-                    ? "text-green-600"
-                    : isCheckingSession || isCheckingStored
-                      ? "text-gray-500"
-                      : "text-red-600"
-                }`}
-              >
-                {isCheckingSession || isCheckingStored
-                  ? "Checking..."
-                  : sessionFound
-                    ? "Bill found!"
-                    : "No bill with this code"}
-              </p>
-            )}
+            {/* Code status message. The wrapper is always rendered so screen
+                readers pick up the change rather than a node insertion. */}
+            <div id="code-status" aria-live="polite" className="min-h-5">
+              {isValidCode && (
+                <p
+                  className={`text-sm ${
+                    sessionFound
+                      ? "text-green-700"
+                      : isCheckingSession || isCheckingStored
+                        ? "text-gray-600"
+                        : "text-red-700"
+                  }`}
+                >
+                  {isCheckingSession || isCheckingStored
+                    ? "Checking..."
+                    : sessionFound
+                      ? "Bill found!"
+                      : "No bill with this code"}
+                </p>
+              )}
+            </div>
           </div>
 
           {/* Error display */}
           {joinError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{joinError}</p>
+            <div
+              role="alert"
+              className="p-3 bg-red-50 border border-red-300 rounded-lg"
+            >
+              <p className="text-red-700 text-sm">{joinError}</p>
             </div>
           )}
 
           {/* Smart button */}
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={buttonDisabled}
-            className={`w-full py-4 text-lg font-semibold text-white rounded-lg transition-colors ${
+            className={`w-full py-4 text-lg font-semibold text-white rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
               isJoinMode
-                ? "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"
+                ? "bg-blue-700 hover:bg-blue-800 active:bg-blue-900"
                 : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-            } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+            } disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed`}
           >
             {buttonText}
           </button>
-        </div>
+        </form>
 
         {/* Bill history section */}
         {history.length > 0 && (
           <div className="mt-8 space-y-3">
-            <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
+            <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wide">
               Recent Bills
             </h2>
             <div className="space-y-2">
@@ -289,14 +344,16 @@ export default function Home() {
                 <Link
                   key={bill.code}
                   to={`/bill/${bill.code}/items`}
-                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex flex-col items-start">
                       <div className="font-medium text-gray-900">
-                        {bill.merchant || `Bill ${bill.code}`}
+                        {merchantByCode.get(bill.code) ||
+                          bill.merchant ||
+                          `Bill ${bill.code}`}
                       </div>
-                      <div className="text-sm text-gray-500">
+                      <div className="text-sm text-gray-600">
                         {new Date(bill.createdAt).toLocaleDateString()}
                       </div>
                     </div>

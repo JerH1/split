@@ -71,7 +71,10 @@ export default function TabNavigation({
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-safe">
+    <nav
+      aria-label="Bill sections"
+      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 pb-safe"
+    >
       <div className="max-w-md mx-auto flex">
         {tabs.map(({ id, label, Icon }) => {
           return (
@@ -79,7 +82,7 @@ export default function TabNavigation({
               to={id}
               key={id}
               className={({ isActive }) => {
-                const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-[56px] transition-colors`;
+                const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-14 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600`;
                 return isActive
                   ? baseClasses + " text-blue-600"
                   : baseClasses + " text-gray-500";
@@ -87,10 +90,12 @@ export default function TabNavigation({
             >
               {({ isActive }) => (
                 <>
-                  <div className="relative">
+                  {/* The badge is a visual duplicate of the count announced
+                      below, so hide the whole graphic from assistive tech. */}
+                  <div className="relative" aria-hidden="true">
                     <Icon className="w-6 h-6" />
                     {id === "items" && unclaimedCount > 0 && (
-                      <span className="absolute -top-1 -right-2 bg-red-500 text-white text-xs font-medium rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                      <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs font-medium rounded-full min-w-4.5 h-4.5 flex items-center justify-center px-1">
                         {unclaimedCount}
                       </span>
                     )}
@@ -100,6 +105,12 @@ export default function TabNavigation({
                   >
                     {label}
                   </span>
+                  {id === "items" && unclaimedCount > 0 && (
+                    <span className="sr-only">
+                      , {unclaimedCount} unclaimed{" "}
+                      {unclaimedCount === 1 ? "item" : "items"}
+                    </span>
+                  )}
                 </>
               )}
             </NavLink>

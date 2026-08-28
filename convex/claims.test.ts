@@ -20,6 +20,7 @@ describe("claims authorization", () => {
           name: "Guest",
           isHost: false,
           joinedAt: Date.now(),
+          secret: "participantId-secret",
         });
         const itemId = await ctx.db.insert("items", {
           sessionId,
@@ -35,6 +36,7 @@ describe("claims authorization", () => {
         sessionId,
         itemId,
         participantId,
+        secret: "participantId-secret",
       });
 
       // Verify: Claim was created
@@ -61,6 +63,7 @@ describe("claims authorization", () => {
             name: "Host1",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "unused-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -80,6 +83,7 @@ describe("claims authorization", () => {
             name: "Guest2",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "otherParticipantId-secret",
           });
 
           return { sessionId, itemId, otherParticipantId };
@@ -92,8 +96,9 @@ describe("claims authorization", () => {
           sessionId,
           itemId,
           participantId: otherParticipantId,
+          secret: "otherParticipantId-secret",
         }),
-      ).rejects.toThrow("Not authorized to claim items in this session");
+      ).rejects.toThrow("Not authorized for this bill");
     });
 
     it("rejects cross-session claim (BTEST-09)", async () => {
@@ -113,6 +118,7 @@ describe("claims authorization", () => {
             name: "Host1",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "unused-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -132,6 +138,7 @@ describe("claims authorization", () => {
             name: "Guest2",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "otherParticipantId-secret",
           });
 
           return { sessionId, itemId, otherParticipantId };
@@ -144,8 +151,9 @@ describe("claims authorization", () => {
           sessionId,
           itemId,
           participantId: otherParticipantId,
+          secret: "otherParticipantId-secret",
         }),
-      ).rejects.toThrow("Not authorized to claim items in this session");
+      ).rejects.toThrow("Not authorized for this bill");
     });
 
     it("handles idempotent claim (BTEST-08)", async () => {
@@ -163,6 +171,7 @@ describe("claims authorization", () => {
           name: "Guest",
           isHost: false,
           joinedAt: Date.now(),
+          secret: "participantId-secret",
         });
         const itemId = await ctx.db.insert("items", {
           sessionId,
@@ -178,11 +187,13 @@ describe("claims authorization", () => {
         sessionId,
         itemId,
         participantId,
+        secret: "participantId-secret",
       });
       const claimId2 = await t.mutation(api.claims.claim, {
         sessionId,
         itemId,
         participantId,
+        secret: "participantId-secret",
       });
 
       // Verify: Same claim ID returned (idempotent)
@@ -216,6 +227,7 @@ describe("claims authorization", () => {
             name: "Guest",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "participantId-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -236,7 +248,8 @@ describe("claims authorization", () => {
       await t.mutation(api.claims.unclaim, {
         itemId,
         participantId,
-        callerParticipantId: participantId, // Self-unclaim
+        callerParticipantId: participantId,
+        secret: "participantId-secret", // Self-unclaim
       });
 
       // Verify: Claim was deleted
@@ -265,12 +278,14 @@ describe("claims authorization", () => {
           name: "Host",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "hostParticipantId-secret",
         });
         const guestParticipantId = await ctx.db.insert("participants", {
           sessionId,
           name: "Guest",
           isHost: false,
           joinedAt: Date.now(),
+          secret: "guestParticipantId-secret",
         });
         const itemId = await ctx.db.insert("items", {
           sessionId,
@@ -296,7 +311,8 @@ describe("claims authorization", () => {
       await t.mutation(api.claims.unclaim, {
         itemId,
         participantId: guestParticipantId,
-        callerParticipantId: hostParticipantId, // Host acting
+        callerParticipantId: hostParticipantId,
+        secret: "hostParticipantId-secret", // Host acting
       });
 
       // Verify: Claim was deleted
@@ -320,18 +336,21 @@ describe("claims authorization", () => {
             name: "Host",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "unused-secret",
           });
           const participant1Id = await ctx.db.insert("participants", {
             sessionId,
             name: "Guest1",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "participant1Id-secret",
           });
           const participant2Id = await ctx.db.insert("participants", {
             sessionId,
             name: "Guest2",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "participant2Id-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -353,7 +372,8 @@ describe("claims authorization", () => {
         t.mutation(api.claims.unclaim, {
           itemId,
           participantId: participant1Id, // Target
-          callerParticipantId: participant2Id, // Caller is not host and not self
+          callerParticipantId: participant2Id,
+          secret: "participant2Id-secret", // Caller is not host and not self
         }),
       ).rejects.toThrow("Not authorized to unclaim for this participant");
     });
@@ -381,12 +401,14 @@ describe("claims authorization", () => {
           name: "Host",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "hostParticipantId-secret",
         });
         const guestParticipantId = await ctx.db.insert("participants", {
           sessionId,
           name: "Guest",
           isHost: false,
           joinedAt: Date.now(),
+          secret: "guestParticipantId-secret",
         });
         const itemId = await ctx.db.insert("items", {
           sessionId,
@@ -413,6 +435,7 @@ describe("claims authorization", () => {
         itemId,
         participantId: guestParticipantId,
         hostParticipantId,
+        secret: "hostParticipantId-secret",
       });
 
       // Verify: Claim was deleted
@@ -436,12 +459,14 @@ describe("claims authorization", () => {
             name: "Host",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "unused-secret",
           });
           const guestParticipantId = await ctx.db.insert("participants", {
             sessionId,
             name: "Guest",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "guestParticipantId-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -463,9 +488,10 @@ describe("claims authorization", () => {
         t.mutation(api.claims.unclaimByHost, {
           itemId,
           participantId: guestParticipantId,
-          hostParticipantId: guestParticipantId, // Non-host pretending to be host
+          hostParticipantId: guestParticipantId,
+          secret: "guestParticipantId-secret", // Non-host pretending to be host
         }),
-      ).rejects.toThrow("Only host can unclaim for others");
+      ).rejects.toThrow("Only the host can unclaim for others");
     });
 
     it("rejects cross-session host unclaim (BTEST-09)", async () => {
@@ -485,12 +511,14 @@ describe("claims authorization", () => {
             name: "Host1",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "unused-secret",
           });
           const guestParticipantId = await ctx.db.insert("participants", {
             sessionId,
             name: "Guest1",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "guestParticipantId-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -515,6 +543,7 @@ describe("claims authorization", () => {
             name: "Host2",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "otherHostId-secret",
           });
 
           return { itemId, guestParticipantId, otherHostId };
@@ -527,8 +556,9 @@ describe("claims authorization", () => {
           itemId,
           participantId: guestParticipantId,
           hostParticipantId: otherHostId,
+          secret: "otherHostId-secret",
         }),
-      ).rejects.toThrow("Host not in this session");
+      ).rejects.toThrow("Not authorized for this bill");
     });
   });
 });

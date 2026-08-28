@@ -3,10 +3,13 @@ import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useOutletContext } from "react-router";
 import { Context } from "../pages/Session";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
 
 export default function Summary() {
   const context: Context = useOutletContext();
   const { session, currentParticipantId } = context;
+
+  useDocumentTitle("Totals");
 
   const totals = useQuery(api.participants.getTotals, {
     sessionId: session._id,
@@ -17,8 +20,11 @@ export default function Summary() {
 
   if (!totals) {
     return (
-      <div className="text-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+      <div role="status" className="text-center py-8">
+        <div
+          aria-hidden="true"
+          className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"
+        ></div>
         <p className="mt-3 text-gray-600">Loading totals...</p>
       </div>
     );
@@ -38,12 +44,15 @@ export default function Summary() {
 
   return (
     <div className="p-4 space-y-4">
+      <h1 className="sr-only">Totals</h1>
+
       {/* Unclaimed Warning */}
       {unclaimedItems.length > 0 && (
         <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
           <div className="flex items-center gap-2">
             <svg
-              className="w-5 h-5 text-yellow-600"
+              aria-hidden="true"
+              className="w-5 h-5 text-yellow-700"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -81,8 +90,11 @@ export default function Summary() {
             >
               {/* Card Header - Clickable */}
               <button
+                type="button"
                 onClick={() => toggleExpand(participant.participantId)}
-                className="w-full p-4 text-left"
+                aria-expanded={isExpanded}
+                aria-controls={`breakdown-${participant.participantId}`}
+                className="w-full p-4 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -90,7 +102,7 @@ export default function Summary() {
                       {participant.name}
                     </span>
                     {isCurrentUser && (
-                      <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
                         You
                       </span>
                     )}
@@ -105,7 +117,8 @@ export default function Summary() {
                       ${(participant.total / 100).toFixed(2)}
                     </span>
                     <svg
-                      className={`w-5 h-5 text-gray-400 transition-transform ${
+                      aria-hidden="true"
+                      className={`w-5 h-5 text-gray-600 transition-transform ${
                         isExpanded ? "rotate-180" : ""
                       }`}
                       fill="none"
@@ -125,23 +138,30 @@ export default function Summary() {
                 {/* Breakdown Row */}
                 <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600">
                   <span>Items ${(participant.subtotal / 100).toFixed(2)}</span>
-                  <span className="text-gray-300">|</span>
+                  <span aria-hidden="true" className="text-gray-400">
+                    |
+                  </span>
                   <span>
                     Taxes & Fees ${(participant.tax / 100).toFixed(2)}
                   </span>
-                  <span className="text-gray-300">|</span>
+                  <span aria-hidden="true" className="text-gray-400">
+                    |
+                  </span>
                   <span>Tip ${(participant.tip / 100).toFixed(2)}</span>
                 </div>
               </button>
 
               {/* Expanded: Itemized List */}
               {isExpanded && (
-                <div className="px-4 pb-4 border-t border-gray-200 mt-2 pt-3">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">
+                <div
+                  id={`breakdown-${participant.participantId}`}
+                  className="px-4 pb-4 border-t border-gray-200 mt-2 pt-3"
+                >
+                  <h2 className="text-sm font-medium text-gray-700 mb-2">
                     Claimed Items
-                  </h4>
+                  </h2>
                   {participant.claimedItems.length === 0 ? (
-                    <p className="text-sm text-gray-500 italic">
+                    <p className="text-sm text-gray-600 italic">
                       No items claimed yet
                     </p>
                   ) : (
@@ -154,7 +174,7 @@ export default function Summary() {
                           <span className="text-gray-700">
                             {item.itemName}
                             {item.claimCount > 1 && (
-                              <span className="text-gray-500 ml-1">
+                              <span className="text-gray-600 ml-1">
                                 (split {item.claimCount} ways)
                               </span>
                             )}
@@ -183,7 +203,7 @@ export default function Summary() {
             </span>
           </div>
           {unclaimedTotal > 0 && (
-            <p className="mt-1 text-sm text-gray-500">
+            <p className="mt-1 text-sm text-gray-700">
               Excludes ${(unclaimedTotal / 100).toFixed(2)} in unclaimed items
             </p>
           )}
@@ -193,7 +213,7 @@ export default function Summary() {
       {/* Empty State */}
       {participants.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-500">No participants yet</p>
+          <p className="text-gray-600">No participants yet</p>
         </div>
       )}
     </div>

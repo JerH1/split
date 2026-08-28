@@ -7,6 +7,7 @@ import ReceiptCapture from "../components/ReceiptCapture";
 import ClaimableItem from "../components/ClaimableItem";
 import ReceiptImageViewer from "../components/ReceiptImageViewer";
 import { updateMerchantNameInBillHistory } from "../lib/billHistory";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { Context } from "../pages/Session";
 
 // Receipt processing state machine
@@ -49,7 +50,10 @@ export default function Items() {
     currentParticipantId,
     isHost,
     groupSubtotal,
+    secret,
   } = context;
+
+  useDocumentTitle(session?.merchant ? `Items - ${session.merchant}` : "Items");
 
   // Draft item state - local only until saved
   const [draftItem, setDraftItem] = useState<{
@@ -78,7 +82,15 @@ export default function Items() {
     setReceiptState({ step: "processing", storageId });
 
     try {
-      const result = await parseReceipt({ storageId });
+      if (!currentParticipantId) {
+        throw new Error("Must be joined to upload receipt");
+      }
+      const result = await parseReceipt({
+        sessionId: session._id,
+        participantId: currentParticipantId,
+        secret,
+        storageId,
+      });
 
       if ("error" in result) {
         // Check for validation rejection (non-receipt)
@@ -111,23 +123,26 @@ export default function Items() {
         quantity: item.quantity,
       }));
 
-      if (!currentParticipantId) {
-        throw new Error("Must be joined to upload receipt");
-      }
       await addBulk({
         sessionId: session._id,
         items: itemsInCents,
         participantId: currentParticipantId,
+        secret,
       });
 
-      if (result.merchant) {
+      // Trim before the truthiness check: OCR can return whitespace-only
+      // text, which is truthy but would be rejected by the mutation and
+      // fail the whole scan after the items above were already saved.
+      const merchant = result.merchant?.trim();
+      if (merchant) {
         await updateMerchant({
           sessionId: session._id,
           participantId: currentParticipantId,
-          merchant: result.merchant,
+          secret,
+          merchant,
         });
         if (session.code) {
-          updateMerchantNameInBillHistory(session.code, result.merchant);
+          updateMerchantNameInBillHistory(session.code, merchant);
         }
       }
 
@@ -140,6 +155,7 @@ export default function Items() {
         await addBulkFees({
           sessionId: session._id,
           participantId: currentParticipantId,
+          secret,
           fees: feesInCents,
         });
       }
@@ -157,6 +173,7 @@ export default function Items() {
           tipType: "manual",
           tipValue: Math.round(result.handwritten_tip.amount * 100), // convert dollars to cents
           participantId: currentParticipantId,
+          secret,
         });
       }
 
@@ -186,6 +203,7 @@ export default function Items() {
     await addItem({
       sessionId: session._id,
       participantId: currentParticipantId,
+      secret,
       name,
       price,
       quantity,
@@ -203,6 +221,7 @@ export default function Items() {
 
   return (
     <div className="p-4 space-y-4">
+      <h1 className="sr-only">Items</h1>
       <div>
         {/* Who's Here section */}
         {participants && participants.length > 0 && (
@@ -220,7 +239,7 @@ export default function Items() {
                   >
                     <span className="font-medium">{participant.name}</span>
                     {participant.isHost && (
-                      <span className="text-xs text-gray-500">(host)</span>
+                      <span className="text-xs text-gray-700">(host)</span>
                     )}
                   </div>
                 ))}
@@ -242,34 +261,52 @@ export default function Items() {
                     items.
                   </p>
                   <button
+                    type="button"
                     onClick={() => setShowReceiptImage(true)}
-                    className="text-sm text-blue-500 underline hover:text-blue-600"
+                    className="inline-flex min-h-[44px] items-center text-sm text-blue-700 underline hover:text-blue-800 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
                   >
                     View original receipt
                   </button>
                 </div>
               )}
-              <ReceiptCapture
-                sessionId={session._id}
-                onUpload={handleReceiptUpload}
-              />
+              {/* Scanning a receipt replaces every item on the bill, so it is
+                  host-only server-side. Showing the buttons to guests would
+                  only produce an upload the next step rejects. */}
+              {isHost ? (
+                <ReceiptCapture
+                  sessionId={session._id}
+                  participantId={currentParticipantId}
+                  secret={secret}
+                  onUpload={handleReceiptUpload}
+                />
+              ) : (
+                <p className="text-sm text-gray-600">
+                  Only the host can scan a receipt for this bill.
+                </p>
+              )}
             </div>
           )}
 
           {/* Uploading state */}
           {receiptState.step === "uploading" && (
-            <div className="text-center py-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <div role="status" className="text-center py-6">
+              <div
+                aria-hidden="true"
+                className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"
+              ></div>
               <p className="mt-3 text-gray-600">Uploading...</p>
             </div>
           )}
 
           {/* Processing state */}
           {receiptState.step === "processing" && (
-            <div className="text-center py-6">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+            <div role="status" className="text-center py-6">
+              <div
+                aria-hidden="true"
+                className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"
+              ></div>
               <p className="mt-3 text-gray-600">Analyzing receipt...</p>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-600 mt-1">
                 Extracting items with AI
               </p>
             </div>
@@ -277,9 +314,10 @@ export default function Items() {
 
           {/* Error state */}
           {receiptState.step === "error" && (
-            <div className="text-center py-6">
-              <div className="text-red-500 mb-3">
+            <div role="alert" className="text-center py-6">
+              <div className="text-red-600 mb-3">
                 <svg
+                  aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   className="h-12 w-12 mx-auto"
                   fill="none"
@@ -296,7 +334,7 @@ export default function Items() {
               </div>
               {receiptState.message.includes("\n\n") ? (
                 <>
-                  <p className="text-red-600 font-medium">
+                  <p className="text-red-700 font-medium">
                     {receiptState.message.split("\n\n")[0]}
                   </p>
                   <p className="text-sm text-gray-600 mt-1">
@@ -305,7 +343,7 @@ export default function Items() {
                 </>
               ) : (
                 <>
-                  <p className="text-red-600 font-medium">
+                  <p className="text-red-700 font-medium">
                     Something went wrong
                   </p>
                   <p className="text-sm text-gray-600 mt-1">
@@ -314,8 +352,9 @@ export default function Items() {
                 </>
               )}
               <button
+                type="button"
                 onClick={handleRetry}
-                className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                className="mt-4 min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               >
                 Try Again
               </button>
@@ -329,7 +368,7 @@ export default function Items() {
             <h2 className="text-lg font-semibold mb-2">
               Items {items && items.length > 0 ? `(${items.length})` : ""}
             </h2>
-            <div className="text-sm text-gray-400 pt-1">
+            <div className="text-sm text-gray-600 pt-1">
               {session.merchant ? session.merchant : null}
             </div>
           </div>
@@ -341,6 +380,7 @@ export default function Items() {
                 claims={(claims ?? []).filter((c) => c.itemId === item._id)}
                 participants={participants ?? []}
                 currentParticipantId={currentParticipantId}
+                secret={secret}
                 isHost={isHost}
               />
             ))}
@@ -359,6 +399,7 @@ export default function Items() {
               claims={[]}
               participants={participants ?? []}
               currentParticipantId={currentParticipantId}
+              secret={secret}
               isHost={isHost}
               isDraft={true}
               onDraftSave={handleDraftSave}
@@ -369,12 +410,13 @@ export default function Items() {
 
           {/* Add item button - available to all participants */}
           <button
+            type="button"
             onClick={() => setDraftItem({ name: "", price: 0, quantity: 1 })}
             disabled={draftItem !== null}
-            className={`w-full mt-2 py-3 px-4 border-2 border-dashed rounded-lg transition-colors ${
+            className={`w-full mt-2 min-h-[44px] py-3 px-4 border-2 border-dashed rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
               draftItem !== null
-                ? "border-gray-200 text-gray-400 cursor-not-allowed"
-                : "border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-700"
+                ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                : "border-gray-400 text-gray-700 hover:border-gray-500 hover:text-gray-900"
             }`}
           >
             + Add Item
@@ -382,7 +424,7 @@ export default function Items() {
 
           {/* Items total */}
           {items && items.length > 0 && (
-            <div className="mt-2 mb-20 pt-2 border-t border-gray-200 flex justify-between items-center">
+            <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
               <span className="font-medium">Items Total</span>
               <span className="font-semibold">
                 ${(groupSubtotal / 100).toFixed(2)}

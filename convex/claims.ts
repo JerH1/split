@@ -1,5 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireHost, requireParticipant, requireMember } from "./auth";
 
 // List all claims in a session (with item and participant details)
 export const listBySession = query({
@@ -12,42 +13,24 @@ export const listBySession = query({
   },
 });
 
-// Get claims for a specific item
-export const getByItem = query({
-  args: { itemId: v.id("items") },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("claims")
-      .withIndex("by_item", (q) => q.eq("itemId", args.itemId))
-      .collect();
-  },
-});
-
-// Get claims for a specific participant
-export const getByParticipant = query({
-  args: { participantId: v.id("participants") },
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("claims")
-      .withIndex("by_participant", (q) =>
-        q.eq("participantId", args.participantId),
-      )
-      .collect();
-  },
-});
-
 // Claim an item
 export const claim = mutation({
   args: {
     sessionId: v.id("sessions"),
     itemId: v.id("items"),
     participantId: v.id("participants"),
+    secret: v.string(),
   },
   handler: async (ctx, args) => {
-    // Verify participant exists and belongs to this session
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || participant.sessionId !== args.sessionId) {
-      throw new Error("Not authorized to claim items in this session");
+    // Prove the caller is who they say, and that they are in this session
+    await requireMember(ctx, args.sessionId, args.participantId, args.secret);
+
+    // The item has to be part of the same bill. Without this check a caller
+    // could file a claim row pointing at an item in someone else's session,
+    // corrupting that bill's totals from outside it.
+    const item = await ctx.db.get(args.itemId);
+    if (!item || item.sessionId !== args.sessionId) {
+      throw new Error("Item not found in this bill");
     }
 
     // Check if already claimed by this participant
@@ -75,12 +58,26 @@ export const unclaim = mutation({
     itemId: v.id("items"),
     participantId: v.id("participants"),
     callerParticipantId: v.id("participants"),
+    secret: v.string(),
   },
   handler: async (ctx, args) => {
-    // Get the caller's participant record
-    const callerParticipant = await ctx.db.get(args.callerParticipantId);
-    if (!callerParticipant) {
-      throw new Error("Caller participant not found");
+    // Authenticate the caller. Passing someone else's public ID used to be
+    // enough to act as them.
+    const callerParticipant = await requireParticipant(
+      ctx,
+      args.callerParticipantId,
+      args.secret,
+    );
+
+    const item = await ctx.db.get(args.itemId);
+    if (!item) {
+      throw new Error("Item not found");
+    }
+
+    // Scope the caller to the item's own bill. isHost is not a global role:
+    // hosting one bill must not let you edit claims in another.
+    if (callerParticipant.sessionId !== item.sessionId) {
+      throw new Error("Not authorized to unclaim for this participant");
     }
 
     // Check authorization: caller is unclaiming self OR caller is host
@@ -109,22 +106,22 @@ export const unclaimByHost = mutation({
     itemId: v.id("items"),
     participantId: v.id("participants"),
     hostParticipantId: v.id("participants"),
+    secret: v.string(),
   },
   handler: async (ctx, args) => {
-    // Verify hostParticipantId is actually a host
-    const host = await ctx.db.get(args.hostParticipantId);
-    if (!host || !host.isHost) {
-      throw new Error("Only host can unclaim for others");
-    }
-
-    // Verify item exists and host's session matches item's session
+    // Verify item exists first so the host check can be scoped to its session
     const item = await ctx.db.get(args.itemId);
     if (!item) {
       throw new Error("Item not found");
     }
-    if (host.sessionId !== item.sessionId) {
-      throw new Error("Host not in this session");
-    }
+
+    await requireHost(
+      ctx,
+      item.sessionId,
+      args.hostParticipantId,
+      args.secret,
+      "unclaim for others",
+    );
 
     // Find and delete the claim
     const claim = await ctx.db

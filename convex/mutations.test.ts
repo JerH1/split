@@ -55,10 +55,13 @@ describe("participant join", () => {
     });
 
     // Action: Join as non-host
-    const participantId = await t.mutation(api.participants.join, {
-      sessionId,
-      name: "Guest",
-    });
+    const { participantId, secret: participantIdSecret } = await t.mutation(
+      api.participants.join,
+      {
+        sessionId,
+        name: "Guest",
+      },
+    );
 
     // Verify: Participant has correct properties
     const participant = await t.run(async (ctx) => ctx.db.get(participantId));
@@ -78,10 +81,13 @@ describe("participant join", () => {
     });
 
     // Action: Join with whitespace-padded name
-    const participantId = await t.mutation(api.participants.join, {
-      sessionId,
-      name: "  Charlie  ",
-    });
+    const { participantId, secret: participantIdSecret } = await t.mutation(
+      api.participants.join,
+      {
+        sessionId,
+        name: "  Charlie  ",
+      },
+    );
 
     // Verify: Name is trimmed
     const participant = await t.run(async (ctx) => ctx.db.get(participantId));
@@ -177,7 +183,7 @@ describe("duplicate name handling", () => {
     });
 
     // Action: Join with different name should work
-    const bobId = await t.mutation(api.participants.join, {
+    const { participantId: bobId } = await t.mutation(api.participants.join, {
       sessionId,
       name: "Bob",
     });
@@ -197,10 +203,13 @@ describe("duplicate name handling", () => {
     });
 
     // Action: Join session2 with "Alice" should work (different session)
-    const aliceInSession2 = await t.mutation(api.participants.join, {
-      sessionId: session2.sessionId,
-      name: "Alice",
-    });
+    const { participantId: aliceInSession2 } = await t.mutation(
+      api.participants.join,
+      {
+        sessionId: session2.sessionId,
+        name: "Alice",
+      },
+    );
 
     expect(aliceInSession2).toBeDefined();
   });
@@ -211,7 +220,7 @@ describe("claim idempotency", () => {
     const t = convexTest(schema);
 
     // Setup: Create session with item and participant
-    const { sessionId, hostParticipantId } = await t.mutation(
+    const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
       api.sessions.create,
       { hostName: "Host" },
     );
@@ -219,6 +228,7 @@ describe("claim idempotency", () => {
     const itemId = await t.mutation(api.items.add, {
       sessionId,
       participantId: hostParticipantId,
+      secret: hostSecret,
       name: "Pizza",
       price: 1500,
     });
@@ -228,12 +238,14 @@ describe("claim idempotency", () => {
       sessionId,
       itemId,
       participantId: hostParticipantId,
+      secret: hostSecret,
     });
 
     const secondClaimId = await t.mutation(api.claims.claim, {
       sessionId,
       itemId,
       participantId: hostParticipantId,
+      secret: hostSecret,
     });
 
     // Verify: Same claim ID returned both times
@@ -244,7 +256,7 @@ describe("claim idempotency", () => {
     const t = convexTest(schema);
 
     // Setup: Create session with item and participant
-    const { sessionId, hostParticipantId } = await t.mutation(
+    const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
       api.sessions.create,
       { hostName: "Host" },
     );
@@ -252,6 +264,7 @@ describe("claim idempotency", () => {
     const itemId = await t.mutation(api.items.add, {
       sessionId,
       participantId: hostParticipantId,
+      secret: hostSecret,
       name: "Burger",
       price: 1200,
     });
@@ -261,12 +274,14 @@ describe("claim idempotency", () => {
       sessionId,
       itemId,
       participantId: hostParticipantId,
+      secret: hostSecret,
     });
 
     await t.mutation(api.claims.claim, {
       sessionId,
       itemId,
       participantId: hostParticipantId,
+      secret: hostSecret,
     });
 
     // Verify: Only one claim exists in database
@@ -284,7 +299,7 @@ describe("claim idempotency", () => {
     const t = convexTest(schema);
 
     // Setup: Create session with item and participant
-    const { sessionId, hostParticipantId } = await t.mutation(
+    const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
       api.sessions.create,
       { hostName: "Host" },
     );
@@ -292,6 +307,7 @@ describe("claim idempotency", () => {
     const itemId = await t.mutation(api.items.add, {
       sessionId,
       participantId: hostParticipantId,
+      secret: hostSecret,
       name: "Salad",
       price: 800,
     });
@@ -301,6 +317,7 @@ describe("claim idempotency", () => {
       sessionId,
       itemId,
       participantId: hostParticipantId,
+      secret: hostSecret,
     });
 
     // Verify: Claim has correct properties
@@ -318,7 +335,7 @@ describe("item removal cascade", () => {
     const t = convexTest(schema);
 
     // Setup: Create session with item
-    const { sessionId, hostParticipantId } = await t.mutation(
+    const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
       api.sessions.create,
       { hostName: "Host" },
     );
@@ -326,6 +343,7 @@ describe("item removal cascade", () => {
     const itemId = await t.mutation(api.items.add, {
       sessionId,
       participantId: hostParticipantId,
+      secret: hostSecret,
       name: "Appetizer",
       price: 900,
     });
@@ -334,6 +352,7 @@ describe("item removal cascade", () => {
     await t.mutation(api.items.remove, {
       itemId,
       participantId: hostParticipantId,
+      secret: hostSecret,
     });
 
     // Verify: Item is deleted
@@ -345,24 +364,27 @@ describe("item removal cascade", () => {
     const t = convexTest(schema);
 
     // Setup: Create session with host, item, and 2 participants who claim it
-    const { sessionId, hostParticipantId } = await t.mutation(
+    const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
       api.sessions.create,
       { hostName: "Host" },
     );
 
-    const guest1Id = await t.mutation(api.participants.join, {
-      sessionId,
-      name: "Guest1",
-    });
+    const { participantId: guest1Id, secret: guest1IdSecret } =
+      await t.mutation(api.participants.join, {
+        sessionId,
+        name: "Guest1",
+      });
 
-    const guest2Id = await t.mutation(api.participants.join, {
-      sessionId,
-      name: "Guest2",
-    });
+    const { participantId: guest2Id, secret: guest2IdSecret } =
+      await t.mutation(api.participants.join, {
+        sessionId,
+        name: "Guest2",
+      });
 
     const itemId = await t.mutation(api.items.add, {
       sessionId,
       participantId: hostParticipantId,
+      secret: hostSecret,
       name: "Shared Nachos",
       price: 1500,
     });
@@ -372,12 +394,14 @@ describe("item removal cascade", () => {
       sessionId,
       itemId,
       participantId: guest1Id,
+      secret: guest1IdSecret,
     });
 
     await t.mutation(api.claims.claim, {
       sessionId,
       itemId,
       participantId: guest2Id,
+      secret: guest2IdSecret,
     });
 
     // Verify: 2 claims exist before removal
@@ -393,6 +417,7 @@ describe("item removal cascade", () => {
     await t.mutation(api.items.remove, {
       itemId,
       participantId: hostParticipantId,
+      secret: hostSecret,
     });
 
     // Verify: Both item and all claims are deleted
@@ -412,7 +437,7 @@ describe("item removal cascade", () => {
     const t = convexTest(schema);
 
     // Setup: Create session with unclaimed item
-    const { sessionId, hostParticipantId } = await t.mutation(
+    const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
       api.sessions.create,
       { hostName: "Host" },
     );
@@ -420,6 +445,7 @@ describe("item removal cascade", () => {
     const itemId = await t.mutation(api.items.add, {
       sessionId,
       participantId: hostParticipantId,
+      secret: hostSecret,
       name: "Unclaimed Item",
       price: 500,
     });
@@ -437,6 +463,7 @@ describe("item removal cascade", () => {
     await t.mutation(api.items.remove, {
       itemId,
       participantId: hostParticipantId,
+      secret: hostSecret,
     });
 
     // Verify: Item is deleted
@@ -537,7 +564,7 @@ describe("input validation", () => {
     it("rejects negative price in items.add", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -546,6 +573,7 @@ describe("input validation", () => {
         t.mutation(api.items.add, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           name: "Item",
           price: -100,
         }),
@@ -555,7 +583,7 @@ describe("input validation", () => {
     it("rejects non-integer cents in items.add", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -564,6 +592,7 @@ describe("input validation", () => {
         t.mutation(api.items.add, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           name: "Item",
           price: 10.5,
         }),
@@ -573,7 +602,7 @@ describe("input validation", () => {
     it("rejects Infinity in items.add", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -582,6 +611,7 @@ describe("input validation", () => {
         t.mutation(api.items.add, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           name: "Item",
           price: Infinity,
         }),
@@ -591,7 +621,7 @@ describe("input validation", () => {
     it("rejects NaN in items.add", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -600,6 +630,7 @@ describe("input validation", () => {
         t.mutation(api.items.add, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           name: "Item",
           price: NaN,
         }),
@@ -609,7 +640,7 @@ describe("input validation", () => {
     it("rejects price over MAX_MONEY_CENTS ($100,000) in items.add", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -619,6 +650,7 @@ describe("input validation", () => {
         t.mutation(api.items.add, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           name: "Item",
           price: 10_000_001, // $100,000.01
         }),
@@ -628,7 +660,7 @@ describe("input validation", () => {
     it("accepts valid price at boundary in items.add", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -637,6 +669,7 @@ describe("input validation", () => {
       const itemId = await t.mutation(api.items.add, {
         sessionId,
         participantId: hostParticipantId,
+        secret: hostSecret,
         name: "Expensive Item",
         price: 10_000_000,
       });
@@ -647,7 +680,7 @@ describe("input validation", () => {
     it("rejects negative tax in sessions.updateTax", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -656,6 +689,7 @@ describe("input validation", () => {
         t.mutation(api.sessions.updateTax, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           tax: -50,
         }),
       ).rejects.toThrow("cannot be negative");
@@ -664,7 +698,7 @@ describe("input validation", () => {
     it("rejects non-integer tax in sessions.updateTax", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -673,6 +707,7 @@ describe("input validation", () => {
         t.mutation(api.sessions.updateTax, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           tax: 8.5,
         }),
       ).rejects.toThrow("must be a whole number");
@@ -683,7 +718,7 @@ describe("input validation", () => {
     it("rejects negative percent in sessions.updateTip", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -692,6 +727,7 @@ describe("input validation", () => {
         t.mutation(api.sessions.updateTip, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           tipType: "percent_subtotal",
           tipValue: -5,
         }),
@@ -701,7 +737,7 @@ describe("input validation", () => {
     it("rejects percent over 100 in sessions.updateTip", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -710,6 +746,7 @@ describe("input validation", () => {
         t.mutation(api.sessions.updateTip, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           tipType: "percent_subtotal",
           tipValue: 150,
         }),
@@ -719,7 +756,7 @@ describe("input validation", () => {
     it("rejects Infinity in sessions.updateTip", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -728,6 +765,7 @@ describe("input validation", () => {
         t.mutation(api.sessions.updateTip, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           tipType: "percent_subtotal",
           tipValue: Infinity,
         }),
@@ -737,7 +775,7 @@ describe("input validation", () => {
     it("rejects NaN in sessions.updateTip", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -746,6 +784,7 @@ describe("input validation", () => {
         t.mutation(api.sessions.updateTip, {
           sessionId,
           participantId: hostParticipantId,
+          secret: hostSecret,
           tipType: "percent_subtotal",
           tipValue: NaN,
         }),
@@ -755,7 +794,7 @@ describe("input validation", () => {
     it("accepts 0% tip in sessions.updateTip", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -763,6 +802,7 @@ describe("input validation", () => {
       await t.mutation(api.sessions.updateTip, {
         sessionId,
         participantId: hostParticipantId,
+        secret: hostSecret,
         tipType: "percent_subtotal",
         tipValue: 0,
       });
@@ -774,7 +814,7 @@ describe("input validation", () => {
     it("accepts 15% tip in sessions.updateTip", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -782,6 +822,7 @@ describe("input validation", () => {
       await t.mutation(api.sessions.updateTip, {
         sessionId,
         participantId: hostParticipantId,
+        secret: hostSecret,
         tipType: "percent_subtotal",
         tipValue: 15,
       });
@@ -793,7 +834,7 @@ describe("input validation", () => {
     it("accepts 20% tip in sessions.updateTip", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -801,6 +842,7 @@ describe("input validation", () => {
       await t.mutation(api.sessions.updateTip, {
         sessionId,
         participantId: hostParticipantId,
+        secret: hostSecret,
         tipType: "percent_total",
         tipValue: 20,
       });
@@ -812,7 +854,7 @@ describe("input validation", () => {
     it("accepts 100% tip in sessions.updateTip", async () => {
       const t = convexTest(schema);
 
-      const { sessionId, hostParticipantId } = await t.mutation(
+      const { sessionId, hostParticipantId, hostSecret } = await t.mutation(
         api.sessions.create,
         { hostName: "Host" },
       );
@@ -820,6 +862,7 @@ describe("input validation", () => {
       await t.mutation(api.sessions.updateTip, {
         sessionId,
         participantId: hostParticipantId,
+        secret: hostSecret,
         tipType: "percent_subtotal",
         tipValue: 100,
       });

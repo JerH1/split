@@ -22,11 +22,13 @@ export default function ConnectionStatus() {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 ${displayBg} ${displayTextColor} text-center py-1.5 text-sm font-medium animate-fade-in`}
+      role="status"
+      className={`fixed top-0 left-0 right-0 z-50 ${displayBg} ${displayTextColor} text-center py-1.5 text-sm font-medium`}
     >
       <div className="flex items-center justify-center gap-2">
         {!isConnectionLost && (
           <svg
+            aria-hidden="true"
             className="w-4 h-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"

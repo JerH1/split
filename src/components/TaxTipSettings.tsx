@@ -5,6 +5,14 @@ import { api } from "../../convex/_generated/api";
 import { calculateTipShare } from "../../convex/calculations";
 import { Context } from "../pages/Session";
 import { Id, Doc } from "../../convex/_generated/dataModel";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
+
+// Tip strategies, as a single-choice radio group
+const TIP_TYPES = [
+  { value: "percent_subtotal", label: "% on subtotal" },
+  { value: "percent_total", label: "% on subtotal + tax" },
+  { value: "manual", label: "Manual amount" },
+] as const;
 
 // Local state for each fee row
 interface FeeEditState {
@@ -14,8 +22,10 @@ interface FeeEditState {
 
 export default function TaxTipSettings() {
   const context: Context = useOutletContext();
-  const { session, currentParticipantId, isHost, groupSubtotal, fees } =
+  const { session, currentParticipantId, isHost, groupSubtotal, fees, secret } =
     context;
+
+  useDocumentTitle("Tax & Tip");
 
   // Local state for fee editing - keyed by fee ID
   const [feeInputs, setFeeInputs] = useState<Map<string, FeeEditState>>(
@@ -25,6 +35,9 @@ export default function TaxTipSettings() {
   // Ref to track newly added fee for auto-focus
   const newFeeIdRef = useRef<string | null>(null);
   const newFeeLabelInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Roving tabindex for the tip-type radio group
+  const tipTypeRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Gratuity and tip state (unchanged from before)
   const [gratuityInput, setGratuityInput] = useState(
@@ -149,6 +162,7 @@ export default function TaxTipSettings() {
       await updateFee({
         feeId,
         participantId: currentParticipantId,
+        secret,
         label: input.label,
       });
     } else {
@@ -156,6 +170,7 @@ export default function TaxTipSettings() {
       await updateFee({
         feeId,
         participantId: currentParticipantId,
+        secret,
         amount: amountInCents,
       });
     }
@@ -166,6 +181,7 @@ export default function TaxTipSettings() {
     const newFeeId = await addFee({
       sessionId: session._id,
       participantId: currentParticipantId,
+      secret,
       label: "New fee",
       amount: 0,
     });
@@ -177,6 +193,7 @@ export default function TaxTipSettings() {
     await removeFee({
       feeId,
       participantId: currentParticipantId,
+      secret,
     });
   }
 
@@ -198,6 +215,7 @@ export default function TaxTipSettings() {
         tipType: newType,
         tipValue: 0,
         participantId: currentParticipantId,
+        secret,
       });
     } else {
       const currentValue = parseFloat(tipInput) || 0;
@@ -206,8 +224,21 @@ export default function TaxTipSettings() {
         tipType: newType,
         tipValue: currentValue,
         participantId: currentParticipantId,
+        secret,
       });
     }
+  }
+
+  // A radio group is a single tab stop; arrows move between the options.
+  function handleTipTypeKeyDown(e: React.KeyboardEvent, index: number) {
+    const forward = e.key === "ArrowRight" || e.key === "ArrowDown";
+    const back = e.key === "ArrowLeft" || e.key === "ArrowUp";
+    if (!forward && !back) return;
+    e.preventDefault();
+    const next =
+      (index + (forward ? 1 : -1) + TIP_TYPES.length) % TIP_TYPES.length;
+    tipTypeRefs.current[next]?.focus();
+    handleTipTypeChange(TIP_TYPES[next].value);
   }
 
   async function handleTipBlur() {
@@ -221,17 +252,20 @@ export default function TaxTipSettings() {
       tipType,
       tipValue,
       participantId: currentParticipantId,
+      secret,
     });
   }
 
   return (
     <div className="p-4 space-y-4">
+      <h1 className="sr-only">Tax & Tip</h1>
+
       {/* Taxes & Fees Section */}
       <div className="p-4 bg-gray-50 rounded-lg">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-gray-800">Taxes & Fees</h3>
+          <h2 className="font-semibold text-gray-800">Taxes & Fees</h2>
           {!isHost && (
-            <span className="text-xs text-gray-500">(set by host)</span>
+            <span className="text-xs text-gray-700">(set by host)</span>
           )}
         </div>
 
@@ -261,10 +295,13 @@ export default function TaxTipSettings() {
                       onBlur={() => handleFeeBlur(fee._id, "label")}
                       onFocus={(e) => e.target.select()}
                       placeholder="Label"
-                      className="flex-1 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      aria-label={`Name of fee ${fee.label || "(unnamed)"}`}
+                      className="flex-1 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                     />
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-500">$</span>
+                      <span aria-hidden="true" className="text-gray-600">
+                        $
+                      </span>
                       <input
                         type="text"
                         inputMode="decimal"
@@ -279,15 +316,18 @@ export default function TaxTipSettings() {
                         onBlur={() => handleFeeBlur(fee._id, "amount")}
                         onFocus={(e) => e.target.select()}
                         placeholder="0.00"
-                        className="w-20 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                        aria-label={`Amount for ${fee.label || "this fee"} in dollars`}
+                        className="w-20 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
                       />
                     </div>
                     <button
+                      type="button"
                       onClick={() => handleRemoveFee(fee._id)}
-                      className="p-2 text-gray-400 hover:text-red-500 transition-colors"
-                      aria-label={`Remove ${fee.label}`}
+                      className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-600 hover:text-red-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                      aria-label={`Remove ${fee.label || "unnamed"} fee`}
                     >
                       <svg
+                        aria-hidden="true"
                         className="w-5 h-5"
                         fill="none"
                         viewBox="0 0 24 24"
@@ -319,8 +359,9 @@ export default function TaxTipSettings() {
           {/* Add fee button (host only) */}
           {isHost && (
             <button
+              type="button"
               onClick={handleAddFee}
-              className="w-full py-2 px-3 border-2 border-dashed border-gray-300 text-gray-600 rounded-md hover:border-gray-400 hover:text-gray-700 transition-colors text-sm"
+              className="w-full min-h-[44px] py-2 px-3 border-2 border-dashed border-gray-400 text-gray-700 rounded-md hover:border-gray-500 hover:text-gray-900 transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
             >
               + Add fee
             </button>
@@ -328,7 +369,7 @@ export default function TaxTipSettings() {
 
           {/* Empty state for non-host */}
           {!isHost && fees.length === 0 && (
-            <p className="text-sm text-gray-500 italic">
+            <p className="text-sm text-gray-600 italic">
               No taxes or fees added
             </p>
           )}
@@ -350,53 +391,50 @@ export default function TaxTipSettings() {
       {/* Tip Section */}
       <div className="p-4 bg-gray-50 rounded-lg">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="font-semibold text-gray-800">Tip</h3>
+          <h2 className="font-semibold text-gray-800">Tip</h2>
           {!isHost && (
-            <span className="text-xs text-gray-500">(set by host)</span>
+            <span className="text-xs text-gray-700">(set by host)</span>
           )}
         </div>
 
         {isHost ? (
           <div className="space-y-4">
             {/* Tip Type Selection */}
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => handleTipTypeChange("percent_subtotal")}
-                className={`px-3 py-2 rounded-md text-sm transition-colors ${
-                  tipType === "percent_subtotal"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                % on subtotal
-              </button>
-              <button
-                onClick={() => handleTipTypeChange("percent_total")}
-                className={`px-3 py-2 rounded-md text-sm transition-colors ${
-                  tipType === "percent_total"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                % on subtotal + tax
-              </button>
-              <button
-                onClick={() => handleTipTypeChange("manual")}
-                className={`px-3 py-2 rounded-md text-sm transition-colors ${
-                  tipType === "manual"
-                    ? "bg-blue-500 text-white"
-                    : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                }`}
-              >
-                Manual amount
-              </button>
+            <div
+              role="radiogroup"
+              aria-label="How to calculate the tip"
+              className="flex flex-wrap gap-2"
+            >
+              {TIP_TYPES.map(({ value, label }, index) => (
+                <button
+                  key={value}
+                  ref={(el) => {
+                    tipTypeRefs.current[index] = el;
+                  }}
+                  type="button"
+                  role="radio"
+                  aria-checked={tipType === value}
+                  tabIndex={tipType === value ? 0 : -1}
+                  onClick={() => handleTipTypeChange(value)}
+                  onKeyDown={(e) => handleTipTypeKeyDown(e, index)}
+                  className={`min-h-[44px] px-3 py-2 rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
+                    tipType === value
+                      ? "bg-blue-600 text-white"
+                      : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             {/* Tip Value Input */}
             <div className="flex items-center gap-2">
               {tipType === "manual" ? (
                 <>
-                  <span className="text-gray-500">$</span>
+                  <span aria-hidden="true" className="text-gray-600">
+                    $
+                  </span>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -407,7 +445,8 @@ export default function TaxTipSettings() {
                     onBlur={handleTipBlur}
                     onFocus={(e) => e.target.select()}
                     placeholder="0.00"
-                    className="w-28 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    aria-label="Tip amount in dollars"
+                    className="w-28 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   />
                 </>
               ) : (
@@ -422,9 +461,16 @@ export default function TaxTipSettings() {
                     onBlur={handleTipBlur}
                     onFocus={(e) => e.target.select()}
                     placeholder="0"
-                    className="w-20 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    aria-label={
+                      tipType === "percent_total"
+                        ? "Tip percentage of subtotal plus tax"
+                        : "Tip percentage of subtotal"
+                    }
+                    className="w-20 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                   />
-                  <span className="text-gray-500">%</span>
+                  <span aria-hidden="true" className="text-gray-600">
+                    %
+                  </span>
                 </>
               )}
             </div>

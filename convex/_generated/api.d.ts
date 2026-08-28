@@ -9,11 +9,13 @@
  */
 
 import type * as actions_parseReceipt from "../actions/parseReceipt.js";
+import type * as auth from "../auth.js";
 import type * as calculations from "../calculations.js";
 import type * as claims from "../claims.js";
 import type * as fees from "../fees.js";
 import type * as items from "../items.js";
 import type * as participants from "../participants.js";
+import type * as random from "../random.js";
 import type * as receipts from "../receipts.js";
 import type * as sessions from "../sessions.js";
 import type * as test from "../test.js";
@@ -27,11 +29,13 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "actions/parseReceipt": typeof actions_parseReceipt;
+  auth: typeof auth;
   calculations: typeof calculations;
   claims: typeof claims;
   fees: typeof fees;
   items: typeof items;
   participants: typeof participants;
+  random: typeof random;
   receipts: typeof receipts;
   sessions: typeof sessions;
   test: typeof test;

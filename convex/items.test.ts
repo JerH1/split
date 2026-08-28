@@ -20,6 +20,7 @@ describe("items authorization", () => {
           name: "Guest",
           isHost: false,
           joinedAt: Date.now(),
+          secret: "participantId-secret",
         });
         return { sessionId, participantId };
       });
@@ -28,6 +29,7 @@ describe("items authorization", () => {
       const itemId = await t.mutation(api.items.add, {
         sessionId,
         participantId,
+        secret: "participantId-secret",
         name: "Burger",
         price: 1500, // $15.00
       });
@@ -60,6 +62,7 @@ describe("items authorization", () => {
           name: "OtherGuest",
           isHost: false,
           joinedAt: Date.now(),
+          secret: "otherParticipantId-secret",
         });
         return { sessionId, otherParticipantId };
       });
@@ -82,10 +85,11 @@ describe("items authorization", () => {
         t.mutation(api.items.add, {
           sessionId,
           participantId: otherParticipantId,
+          secret: "otherParticipantId-secret",
           name: "Burger",
           price: 1500,
         }),
-      ).rejects.toThrow("Not authorized to add items to this session");
+      ).rejects.toThrow("Not authorized for this bill");
     });
 
     it("rejects cross-session item add (BTEST-09)", async () => {
@@ -104,6 +108,7 @@ describe("items authorization", () => {
           name: "Host1",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "unused-secret",
         });
 
         // Session 2
@@ -117,6 +122,7 @@ describe("items authorization", () => {
           name: "Host2",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "otherParticipantId-secret",
         });
 
         return { sessionId, otherParticipantId };
@@ -127,10 +133,11 @@ describe("items authorization", () => {
         t.mutation(api.items.add, {
           sessionId,
           participantId: otherParticipantId,
+          secret: "otherParticipantId-secret",
           name: "Burger",
           price: 1500,
         }),
-      ).rejects.toThrow("Not authorized to add items to this session");
+      ).rejects.toThrow("Not authorized for this bill");
     });
   });
 
@@ -151,6 +158,7 @@ describe("items authorization", () => {
             name: "Host",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "hostParticipantId-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -166,6 +174,7 @@ describe("items authorization", () => {
       await t.mutation(api.items.remove, {
         itemId,
         participantId: hostParticipantId,
+        secret: "hostParticipantId-secret",
       });
 
       // Verify: Item was deleted
@@ -189,12 +198,14 @@ describe("items authorization", () => {
             name: "Host",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "hostParticipantId-secret",
           });
           const guestParticipantId = await ctx.db.insert("participants", {
             sessionId,
             name: "Guest",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "guestParticipantId-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -215,6 +226,7 @@ describe("items authorization", () => {
       await t.mutation(api.items.remove, {
         itemId,
         participantId: hostParticipantId,
+        secret: "hostParticipantId-secret",
       });
 
       // Verify: Both item and claim were deleted
@@ -240,12 +252,14 @@ describe("items authorization", () => {
             name: "Host",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "unused-secret",
           });
           const nonHostParticipantId = await ctx.db.insert("participants", {
             sessionId,
             name: "Guest",
             isHost: false,
             joinedAt: Date.now(),
+            secret: "nonHostParticipantId-secret",
           });
           const itemId = await ctx.db.insert("items", {
             sessionId,
@@ -262,6 +276,7 @@ describe("items authorization", () => {
         t.mutation(api.items.remove, {
           itemId,
           participantId: nonHostParticipantId,
+          secret: "nonHostParticipantId-secret",
         }),
       ).rejects.toThrow("Only the host can remove items");
     });
@@ -282,6 +297,7 @@ describe("items authorization", () => {
           name: "Host1",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "unused-secret",
         });
         const itemId = await ctx.db.insert("items", {
           sessionId,
@@ -301,6 +317,7 @@ describe("items authorization", () => {
           name: "Host2",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "otherHostId-secret",
         });
 
         return { itemId, otherHostId };
@@ -311,8 +328,9 @@ describe("items authorization", () => {
         t.mutation(api.items.remove, {
           itemId,
           participantId: otherHostId,
+          secret: "otherHostId-secret",
         }),
-      ).rejects.toThrow("Participant not in this session");
+      ).rejects.toThrow("Not authorized for this bill");
     });
   });
 
@@ -332,6 +350,7 @@ describe("items authorization", () => {
           name: "Host",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "hostParticipantId-secret",
         });
         return { sessionId, hostParticipantId };
       });
@@ -340,6 +359,7 @@ describe("items authorization", () => {
       const itemIds = await t.mutation(api.items.addBulk, {
         sessionId,
         participantId: hostParticipantId,
+        secret: "hostParticipantId-secret",
         items: [
           { name: "Burger", price: 1500 },
           { name: "Fries", price: 500 },
@@ -378,12 +398,14 @@ describe("items authorization", () => {
           name: "Host",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "unused-secret",
         });
         const nonHostParticipantId = await ctx.db.insert("participants", {
           sessionId,
           name: "Guest",
           isHost: false,
           joinedAt: Date.now(),
+          secret: "nonHostParticipantId-secret",
         });
         return { sessionId, nonHostParticipantId };
       });
@@ -393,6 +415,7 @@ describe("items authorization", () => {
         t.mutation(api.items.addBulk, {
           sessionId,
           participantId: nonHostParticipantId,
+          secret: "nonHostParticipantId-secret",
           items: [{ name: "Burger", price: 1500 }],
         }),
       ).rejects.toThrow("Only the host can replace all items");
@@ -414,6 +437,7 @@ describe("items authorization", () => {
           name: "Host1",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "unused-secret",
         });
 
         // Session 2
@@ -427,6 +451,7 @@ describe("items authorization", () => {
           name: "Host2",
           isHost: true,
           joinedAt: Date.now(),
+          secret: "otherHostId-secret",
         });
 
         return { sessionId, otherHostId };
@@ -437,9 +462,10 @@ describe("items authorization", () => {
         t.mutation(api.items.addBulk, {
           sessionId,
           participantId: otherHostId,
+          secret: "otherHostId-secret",
           items: [{ name: "Burger", price: 1500 }],
         }),
-      ).rejects.toThrow("Participant not in this session");
+      ).rejects.toThrow("Not authorized for this bill");
     });
 
     it("replaces existing items when bulk adding (BTEST-06)", async () => {
@@ -458,6 +484,7 @@ describe("items authorization", () => {
             name: "Host",
             isHost: true,
             joinedAt: Date.now(),
+            secret: "hostParticipantId-secret",
           });
           const existingItemId = await ctx.db.insert("items", {
             sessionId,
@@ -473,6 +500,7 @@ describe("items authorization", () => {
       await t.mutation(api.items.addBulk, {
         sessionId,
         participantId: hostParticipantId,
+        secret: "hostParticipantId-secret",
         items: [
           { name: "NewItem1", price: 1000 },
           { name: "NewItem2", price: 2000 },
