@@ -15,6 +15,8 @@ interface ClaimableItemProps {
   /** The current user's secret. Every mutation below has to present it. */
   secret: string;
   isHost: boolean;
+  // A locked bill is read-only: no claiming, no editing, no splitting.
+  isLocked?: boolean;
   // Draft mode props - item is local only, not in DB yet
   isDraft?: boolean;
   onDraftSave?: (name: string, price: number, quantity: number) => void;
@@ -29,6 +31,7 @@ export default function ClaimableItem({
   currentParticipantId,
   secret,
   isHost,
+  isLocked = false,
   isDraft = false,
   onDraftSave,
   onDraftCancel,
@@ -80,6 +83,14 @@ export default function ClaimableItem({
   const claimItem = useMutation(api.claims.claim);
   const unclaimItem = useMutation(api.claims.unclaim);
   const unclaimByHost = useMutation(api.claims.unclaimByHost);
+  const claimForEveryone = useMutation(api.claims.claimForEveryone);
+  const unclaimEveryone = useMutation(api.claims.unclaimEveryone);
+
+  // A shared plate is on everyone's tab. Worth its own control: doing this by
+  // hand means every person hunting down the same row, and the split is wrong
+  // until the last one gets there.
+  const everyoneClaimed =
+    participants.length > 0 && claims.length === participants.length;
 
   // Get claimer names
   const claimerNames = claims
@@ -89,9 +100,29 @@ export default function ClaimableItem({
     })
     .sort();
 
+  function handleEveryone(e: React.MouseEvent) {
+    e.stopPropagation(); // Prevent claim toggle
+    if (!currentParticipantId || isDraft) return;
+
+    if (everyoneClaimed) {
+      unclaimEveryone({
+        itemId: item._id,
+        participantId: currentParticipantId,
+        secret,
+      });
+    } else {
+      claimForEveryone({
+        sessionId: item.sessionId,
+        itemId: item._id,
+        participantId: currentParticipantId,
+        secret,
+      });
+    }
+  }
+
   // Handle tap to toggle claim (disabled for drafts)
   function handleTap() {
-    if (!currentParticipantId || isEditing || isDraft) return;
+    if (!currentParticipantId || isEditing || isDraft || isLocked) return;
 
     if (hasClaimed) {
       unclaimItem({
@@ -296,8 +327,10 @@ export default function ClaimableItem({
   }
 
   // View mode - tappable for claiming
-  const canClaim = currentParticipantId !== null;
+  const canClaim = currentParticipantId !== null && !isLocked;
   const isUnclaimed = claimerNames.length === 0;
+  // Splitting one item across one person is just claiming it.
+  const showEveryone = canClaim && !isDraft && participants.length > 1;
 
   // Spoken name for the row. Without this a screen reader reads the raw
   // contents, including the nested "Edit item" button, as the toggle's label.
@@ -339,22 +372,38 @@ export default function ClaimableItem({
           <span className="text-gray-700">
             ${(item.price / 100).toFixed(2)}
           </span>
-          <button
-            type="button"
-            onClick={handleEdit}
-            className="min-h-[44px] min-w-[44px] p-2 text-gray-600 hover:bg-gray-200 rounded-md transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-            aria-label={`Edit ${item.name || "item"}`}
-          >
-            <svg
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-5 w-5"
-              viewBox="0 0 20 20"
-              fill="currentColor"
+          {showEveryone && (
+            <button
+              type="button"
+              onClick={handleEveryone}
+              aria-pressed={everyoneClaimed}
+              className={`min-h-[44px] px-2.5 rounded-md text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                everyoneClaimed
+                  ? "bg-blue-600 text-white hover:bg-blue-700"
+                  : "text-gray-600 hover:bg-gray-200"
+              }`}
             >
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
-          </button>
+              Everyone
+            </button>
+          )}
+          {!isLocked && (
+            <button
+              type="button"
+              onClick={handleEdit}
+              className="min-h-[44px] min-w-[44px] p-2 text-gray-600 hover:bg-gray-200 rounded-md transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+              aria-label={`Edit ${item.name || "item"}`}
+            >
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
@@ -377,7 +426,7 @@ export default function ClaimableItem({
                 }`}
               >
                 {name}
-                {isHost && (
+                {isHost && !isLocked && (
                   <button
                     type="button"
                     onClick={(e) => handleHostUnclaim(e, c.participantId)}

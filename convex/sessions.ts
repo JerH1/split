@@ -8,6 +8,7 @@ import {
   validateTipPercent,
   validateMerchant,
 } from "./validation";
+import { assertSessionOpen } from "./locking";
 
 // Bill history holds at most 10 entries, so 10 is all a legitimate client ever
 // needs. Every extra code per request is extra leverage for someone spraying
@@ -126,6 +127,7 @@ export const updateTip = mutation({
       args.secret,
       "modify bill settings",
     );
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Validate tip value based on type
     let validatedTipValue: number;
@@ -159,6 +161,8 @@ export const updateTax = mutation({
       "modify bill settings",
     );
 
+    await assertSessionOpen(ctx, args.sessionId);
+
     // Validate tax amount
     const validatedTax = validateMoney(args.tax, "Tax");
 
@@ -183,8 +187,63 @@ export const updateMerchant = mutation({
       "modify bill settings",
     );
 
+    await assertSessionOpen(ctx, args.sessionId);
+
     await ctx.db.patch(args.sessionId, {
       merchant: validateMerchant(args.merchant),
+    });
+  },
+});
+
+// Record the grand total printed on the receipt (host only).
+//
+// Kept separate from the item list so the summary can compare what the receipt
+// says against what the items actually add up to. A mismatch means OCR dropped
+// or misread something, and the group is about to split the wrong number.
+export const updateReceiptTotal = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    participantId: v.id("participants"),
+    secret: v.string(),
+    receiptTotal: v.number(), // in cents
+  },
+  handler: async (ctx, args) => {
+    await requireHost(
+      ctx,
+      args.sessionId,
+      args.participantId,
+      args.secret,
+      "modify bill settings",
+    );
+    await assertSessionOpen(ctx, args.sessionId);
+
+    const validatedTotal = validateMoney(args.receiptTotal, "Receipt total");
+    await ctx.db.patch(args.sessionId, { receiptTotal: validatedTotal });
+  },
+});
+
+// Lock or unlock the bill (host only).
+//
+// Deliberately not guarded by assertSessionOpen: unlocking a locked bill is the
+// one change that has to work while it is locked.
+export const setLocked = mutation({
+  args: {
+    sessionId: v.id("sessions"),
+    participantId: v.id("participants"),
+    secret: v.string(),
+    locked: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await requireHost(
+      ctx,
+      args.sessionId,
+      args.participantId,
+      args.secret,
+      "lock this bill",
+    );
+
+    await ctx.db.patch(args.sessionId, {
+      lockedAt: args.locked ? Date.now() : undefined,
     });
   },
 });

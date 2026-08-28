@@ -6,6 +6,7 @@ import {
   stripInvisible,
   validateMoney,
 } from "./validation";
+import { assertSessionOpen } from "./locking";
 
 // Max label length for fee labels
 const MAX_FEE_LABEL_LENGTH = 100;
@@ -64,6 +65,7 @@ export const add = mutation({
     if (existingFees.length >= MAX_FEES_PER_SESSION) {
       throw new Error(`Too many fees (max ${MAX_FEES_PER_SESSION})`);
     }
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Validate inputs
     const validatedLabel = validateFeeLabel(args.label);
@@ -104,6 +106,7 @@ export const addBulk = mutation({
       args.secret,
       "replace all fees",
     );
+    await assertSessionOpen(ctx, args.sessionId);
 
     // Validate all fees before making any changes
     const validatedFees = args.fees.map((fee) => ({
@@ -159,6 +162,7 @@ export const update = mutation({
       args.secret,
       "update fees",
     );
+    await assertSessionOpen(ctx, fee.sessionId);
 
     // Validate and build updates
     const updates: Record<string, unknown> = {};
@@ -195,6 +199,7 @@ export const remove = mutation({
       args.secret,
       "remove fees",
     );
+    await assertSessionOpen(ctx, fee.sessionId);
 
     await ctx.db.delete(args.feeId);
   },

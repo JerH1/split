@@ -21,6 +21,7 @@ export interface Context {
   session: Doc<"sessions">;
   items: Doc<"items">[];
   isHost: boolean;
+  isLocked: boolean;
   groupSubtotal: number;
   claims: Doc<"claims">[];
   currentParticipantId: Id<"participants">;
@@ -66,6 +67,7 @@ export default function Session() {
   // Derive current participant info (null if not joined)
   const currentParticipantId = currentParticipant?._id ?? null;
   const isHost = currentParticipant?.isHost ?? false;
+  const isLocked = session?.lockedAt !== undefined;
 
   // Fetch items for this session
   const items = useQuery(
@@ -215,7 +217,7 @@ export default function Session() {
   // Handle copying session code to clipboard
   async function handleCopyCode() {
     try {
-      const shareUrl = `${window.location.host}/bill/${session?.code}`;
+      const shareUrl = `${window.location.origin}/bill/${session?.code}`;
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -277,8 +279,55 @@ export default function Session() {
           </p>
         </button>
 
-        {/* Spacer to balance back button width */}
-        <div className="w-[72px] shrink-0" />
+        {/* QR code button */}
+        <Link
+          to="qr"
+          className="flex items-center justify-center px-4 py-4 text-blue-600 hover:text-blue-800 active:text-blue-900 shrink-0 w-[72px]"
+          aria-label="Show QR code"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+            <rect
+              x="5"
+              y="5"
+              width="3"
+              height="3"
+              fill="currentColor"
+              stroke="none"
+            />
+            <rect
+              x="16"
+              y="5"
+              width="3"
+              height="3"
+              fill="currentColor"
+              stroke="none"
+            />
+            <rect
+              x="5"
+              y="16"
+              width="3"
+              height="3"
+              fill="currentColor"
+              stroke="none"
+            />
+            <path d="M14 14h3v3h-3z" fill="currentColor" stroke="none" />
+            <path d="M17 17h3v3h-3z" fill="currentColor" stroke="none" />
+            <path d="M14 20h3" />
+            <path d="M20 14v3" />
+          </svg>
+        </Link>
       </div>
 
       {/* Copy confirmation. A persistent live region, so the change is
@@ -286,6 +335,32 @@ export default function Session() {
       <p aria-live="polite" className="sr-only">
         {copied ? "Share link copied to clipboard" : ""}
       </p>
+
+      {/* Locked banner - the split is frozen, so say so before anyone tries
+          to change it and gets a rejected mutation instead. */}
+      {isLocked && (
+        <div
+          role="status"
+          className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm text-amber-900"
+        >
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 shrink-0"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span>
+            This bill is locked
+            {isHost ? " — unlock it from Totals to make changes." : "."}
+          </span>
+        </div>
+      )}
 
       {/* Bottom padding clears the fixed tab bar on every tab, including at
           high zoom where the bar grows. */}
@@ -298,6 +373,7 @@ export default function Session() {
             claims,
             currentParticipantId,
             isHost,
+            isLocked,
             groupSubtotal,
             fees: displayFees,
             secret: credentials?.secret ?? "",

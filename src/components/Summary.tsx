@@ -1,21 +1,29 @@
 import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { useOutletContext } from "react-router";
 import { Context } from "../pages/Session";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
+import PaymentSetup from "./PaymentSetup";
+import ReadyToggle from "./ReadyToggle";
+import SettleRow from "./SettleRow";
+import { buildSummaryText, shareSummary } from "../lib/shareSummary";
 
 export default function Summary() {
   const context: Context = useOutletContext();
-  const { session, currentParticipantId } = context;
+  const { session, currentParticipantId, isHost, isLocked, secret } = context;
 
   useDocumentTitle("Totals");
 
   const totals = useQuery(api.participants.getTotals, {
     sessionId: session._id,
   });
+  const setLocked = useMutation(api.sessions.setLocked);
   const [expandedParticipant, setExpandedParticipant] = useState<string | null>(
     null,
+  );
+  const [shareState, setShareState] = useState<"idle" | "copied" | "failed">(
+    "idle",
   );
 
   if (!totals) {
@@ -36,10 +44,45 @@ export default function Summary() {
   // Calculate group total
   const groupTotal = participants.reduce((sum, p) => sum + p.total, 0);
 
+  const me = participants.find((p) => p.participantId === currentParticipantId);
+  const notReady = participants.filter((p) => !p.isReady);
+
   function toggleExpand(participantId: string) {
     setExpandedParticipant((prev) =>
       prev === participantId ? null : participantId,
     );
+  }
+
+  async function handleShare() {
+    const billUrl = `${window.location.origin}/bill/${session.code}`;
+    const text = buildSummaryText({
+      people: participants.map((p) => ({ name: p.name, total: p.total })),
+      merchant: session.merchant,
+      code: session.code,
+      billUrl,
+      unclaimedTotal,
+    });
+
+    const result = await shareSummary(
+      text,
+      session.merchant ? `Split for ${session.merchant}` : "Bill split",
+    );
+    // A native share sheet is its own confirmation; a silent clipboard write
+    // is not, so only that case needs feedback.
+    if (result === "copied" || result === "failed") {
+      setShareState(result);
+      setTimeout(() => setShareState("idle"), 2000);
+    }
+  }
+
+  async function handleToggleLock() {
+    if (!currentParticipantId) return;
+    await setLocked({
+      sessionId: session._id,
+      participantId: currentParticipantId,
+      secret,
+      locked: !isLocked,
+    });
   }
 
   return (
@@ -109,6 +152,19 @@ export default function Summary() {
                     {participant.isHost && (
                       <span className="text-xs bg-gray-500 text-white px-2 py-0.5 rounded-full">
                         Host
+                      </span>
+                    )}
+                    {participant.isReady && (
+                      <span
+                        className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full"
+                        title="Done claiming"
+                      >
+                        ✓ Done
+                      </span>
+                    )}
+                    {participant.paidAt !== undefined && (
+                      <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
+                        Settled
                       </span>
                     )}
                   </div>
@@ -186,6 +242,33 @@ export default function Summary() {
                       ))}
                     </ul>
                   )}
+
+                  {/* Settle up */}
+                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                    {currentParticipantId && (
+                      <SettleRow
+                        participantId={participant.participantId}
+                        name={participant.name}
+                        total={participant.total}
+                        paymentMethod={participant.paymentMethod}
+                        paymentHandle={participant.paymentHandle}
+                        paidAt={participant.paidAt}
+                        secret={secret}
+                        currentParticipantId={currentParticipantId}
+                        isCurrentUser={isCurrentUser}
+                        isHost={isHost}
+                        billLabel={session.merchant ?? `Bill ${session.code}`}
+                      />
+                    )}
+                    {isCurrentUser && (
+                      <PaymentSetup
+                        participantId={participant.participantId}
+                        secret={secret}
+                        currentMethod={participant.paymentMethod}
+                        currentHandle={participant.paymentHandle}
+                      />
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -205,6 +288,61 @@ export default function Summary() {
           {unclaimedTotal > 0 && (
             <p className="mt-1 text-sm text-gray-700">
               Excludes ${(unclaimedTotal / 100).toFixed(2)} in unclaimed items
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Am I done claiming? */}
+      {me && currentParticipantId && (
+        <div className="p-4 bg-white border border-gray-200 rounded-lg space-y-2">
+          <ReadyToggle
+            participantId={currentParticipantId}
+            secret={secret}
+            isReady={me.isReady}
+            disabled={isLocked}
+          />
+          {notReady.length > 0 && (
+            <p className="text-sm text-gray-600">
+              Still claiming: {notReady.map((p) => p.name).join(", ")}
+            </p>
+          )}
+          {notReady.length === 0 && participants.length > 1 && (
+            <p className="text-sm text-green-700 font-medium">
+              Everyone's done claiming — these totals are final.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Share + lock */}
+      {participants.length > 0 && (
+        <div className="space-y-2 mb-20">
+          <button
+            type="button"
+            onClick={handleShare}
+            className="w-full min-h-[44px] py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {shareState === "copied"
+              ? "Copied to clipboard"
+              : shareState === "failed"
+                ? "Couldn't share — try again"
+                : "Share the split"}
+          </button>
+
+          {isHost && (
+            <button
+              type="button"
+              onClick={handleToggleLock}
+              className="w-full min-h-[44px] py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              {isLocked ? "Unlock this bill" : "Lock this bill"}
+            </button>
+          )}
+          {isHost && !isLocked && (
+            <p className="text-xs text-gray-500 text-center">
+              Locking freezes items and claims so nothing changes after people
+              pay.
             </p>
           )}
         </div>

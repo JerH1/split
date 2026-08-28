@@ -2,6 +2,17 @@
 // All prices in cents (integers) to avoid floating point issues
 
 /**
+ * What a line costs in total: unit price times quantity.
+ *
+ * `price` is the price of ONE unit. Receipt parsing splits multi-quantity lines
+ * into separate items so quantity is almost always 1, but a hand-entered item
+ * can carry a real quantity, and every total has to agree about what that means.
+ */
+export function lineTotal(item: { price: number; quantity: number }): number {
+  return item.price * item.quantity;
+}
+
+/**
  * Calculate each claimant's share of an item price.
  * Uses Math.floor for division, distributes remainder cents to first claimants.
  * Example: $10 (1000 cents) split 3 ways = [334, 333, 333] cents

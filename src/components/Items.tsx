@@ -6,6 +6,7 @@ import { Id } from "../../convex/_generated/dataModel";
 import ReceiptCapture from "../components/ReceiptCapture";
 import ClaimableItem from "../components/ClaimableItem";
 import ReceiptImageViewer from "../components/ReceiptImageViewer";
+import ReceiptBalance from "../components/ReceiptBalance";
 import { updateMerchantNameInBillHistory } from "../lib/billHistory";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { Context } from "../pages/Session";
@@ -49,8 +50,10 @@ export default function Items() {
     claims,
     currentParticipantId,
     isHost,
+    isLocked,
     groupSubtotal,
     secret,
+    fees,
   } = context;
 
   useDocumentTitle(session?.merchant ? `Items - ${session.merchant}` : "Items");
@@ -75,6 +78,7 @@ export default function Items() {
   const updateTip = useMutation(api.sessions.updateTip);
   const addItem = useMutation(api.items.add);
   const updateMerchant = useMutation(api.sessions.updateMerchant);
+  const updateReceiptTotal = useMutation(api.sessions.updateReceiptTotal);
 
   // Handle receipt upload - triggers OCR processing and saves items directly
   async function handleReceiptUpload(storageId: Id<"_storage">) {
@@ -144,6 +148,17 @@ export default function Items() {
         if (session.code) {
           updateMerchantNameInBillHistory(session.code, merchant);
         }
+      }
+
+      // Keep the receipt's own grand total so the summary can check the parsed
+      // items against it. OCR dropping a line is silent otherwise.
+      if (result.total !== null && result.total !== undefined) {
+        await updateReceiptTotal({
+          sessionId: session._id,
+          participantId: currentParticipantId,
+          secret,
+          receiptTotal: Math.round(result.total * 100),
+        });
       }
 
       // Add fees from receipt (convert to cents)
@@ -364,6 +379,15 @@ export default function Items() {
 
         {/* Items list */}
         <div className="mb-3">
+          {items && items.length > 0 && (
+            <div className="mb-3">
+              <ReceiptBalance
+                receiptTotal={session.receiptTotal}
+                itemsSubtotal={groupSubtotal}
+                fees={fees ?? []}
+              />
+            </div>
+          )}
           <div className="flex flex-row justify-between">
             <h2 className="text-lg font-semibold mb-2">
               Items {items && items.length > 0 ? `(${items.length})` : ""}
@@ -382,6 +406,7 @@ export default function Items() {
                 currentParticipantId={currentParticipantId}
                 secret={secret}
                 isHost={isHost}
+                isLocked={isLocked}
               />
             ))}
           </div>
@@ -409,18 +434,20 @@ export default function Items() {
           )}
 
           {/* Add item button - available to all participants */}
-          <button
-            type="button"
-            onClick={() => setDraftItem({ name: "", price: 0, quantity: 1 })}
-            disabled={draftItem !== null}
-            className={`w-full mt-2 min-h-[44px] py-3 px-4 border-2 border-dashed rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
-              draftItem !== null
-                ? "border-gray-300 text-gray-500 cursor-not-allowed"
-                : "border-gray-400 text-gray-700 hover:border-gray-500 hover:text-gray-900"
-            }`}
-          >
-            + Add Item
-          </button>
+          {!isLocked && (
+            <button
+              type="button"
+              onClick={() => setDraftItem({ name: "", price: 0, quantity: 1 })}
+              disabled={draftItem !== null}
+              className={`w-full mt-2 min-h-[44px] py-3 px-4 border-2 border-dashed rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
+                draftItem !== null
+                  ? "border-gray-300 text-gray-500 cursor-not-allowed"
+                  : "border-gray-400 text-gray-700 hover:border-gray-500 hover:text-gray-900"
+              }`}
+            >
+              + Add Item
+            </button>
+          )}
 
           {/* Items total */}
           {items && items.length > 0 && (
