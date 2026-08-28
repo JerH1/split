@@ -50,8 +50,9 @@ test.describe("Join Flow", () => {
       // 6. Click "Join Bill"
       await guestPage.click('button:has-text("Join Bill")');
 
-      // 7. Verify navigation to session page
-      await expect(guestPage).toHaveURL(`/bill/${code}`);
+      // 7. Verify navigation to session page. /bill/:code redirects to the
+      // items tab since the routing refactor, so assert where we land.
+      await expect(guestPage).toHaveURL(`/bill/${code}/items`);
     } finally {
       await hostContext.close();
       await guestContext.close();

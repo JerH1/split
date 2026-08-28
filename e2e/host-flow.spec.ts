@@ -62,12 +62,16 @@ test.describe("Host Flow", () => {
     // Navigate to Tax & Tip tab
     await page.getByRole("link", { name: "Tax & Tip" }).click();
 
-    // Wait for tab content to load - look for the Tip section header
-    await expect(page.locator("h3:has-text('Tip')")).toBeVisible();
+    // Wait for tab content to load - look for the Tip section header.
+    // The heading has been an h2 since the redesign; this selector was still
+    // looking for an h3, so it could never match.
+    await expect(page.locator("h2:has-text('Tip')")).toBeVisible();
 
-    // The tip input is a percent input (adjacent to % sign) when in percent_subtotal mode
-    // Find the input next to the % sign in the Tip section
-    const tipInput = page.locator('input[inputmode="decimal"]').nth(2);
+    // The tip input is a percent input when in percent_subtotal mode. Found by
+    // its label rather than by index: nth(2) assumed the two standalone tax and
+    // gratuity inputs that the fees table replaced, so on a bill with no fees
+    // there was no third decimal input to find.
+    const tipInput = page.getByLabel("Tip percentage of subtotal");
     await tipInput.fill("20");
     await tipInput.blur();
 
