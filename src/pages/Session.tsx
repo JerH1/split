@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { useParams, Link, Outlet } from "react-router";
-import { useQuery } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import JoinGate from "../components/JoinGate";
@@ -10,6 +10,7 @@ import ThemeToggle from "../components/ThemeToggle";
 import LanguagePicker from "../components/LanguagePicker";
 import { useT } from "../lib/i18n/context";
 import { getStoredParticipant, StoredCredentials } from "../lib/sessionStorage";
+import { getPaymentPreference } from "../lib/userPreferences";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 
 /**
@@ -130,6 +131,34 @@ export default function Session() {
     if (!items) return 0;
     return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   }, [items]);
+
+  // Carry the device's saved payment handle onto this bill.
+  //
+  // Every way into a bill lands here - created, joined, or reopened from
+  // history - so this is the one place that needs to know about it. It only
+  // ever fills a blank: a handle already set on this bill was set deliberately,
+  // possibly to something other than the usual one.
+  const setPaymentInfo = useMutation(api.participants.setPaymentInfo);
+  const appliedPaymentForRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!currentParticipant || !credentials) return;
+    if (currentParticipant.paymentHandle !== undefined) return;
+    if (appliedPaymentForRef.current === currentParticipant._id) return;
+
+    const preference = getPaymentPreference();
+    if (!preference) return;
+
+    appliedPaymentForRef.current = currentParticipant._id;
+    void setPaymentInfo({
+      participantId: currentParticipant._id,
+      secret: credentials.secret,
+      paymentMethod: preference.method,
+      paymentHandle: preference.handle,
+    }).catch(() => {
+      // Nothing to say here. The handle is still editable on the Totals tab,
+      // which is where a person would go looking for it anyway.
+    });
+  }, [currentParticipant, credentials, setPaymentInfo]);
 
   // Detect new participants who joined after page load
   useEffect(() => {

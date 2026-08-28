@@ -34,6 +34,9 @@ export const th: Messages = {
 
   "home.gotACode": "มีรหัสไหม",
   "home.optional": "ไม่บังคับ",
+  "home.gettingPaidBack": "ช่องทางรับเงิน",
+  "home.payHint":
+    "บันทึกไว้ในเครื่องนี้ และจะถูกเพิ่มให้ทุกบิลที่คุณเปิดหรือเข้าร่วม",
   "home.billFound": "เจอบิลแล้ว!",
   "home.noBillWithCode": "ไม่มีบิลที่ใช้รหัสนี้",
   "home.joining": "กำลังเข้าร่วม...",
@@ -206,6 +209,8 @@ export const th: Messages = {
   "totals.lockingExplainer":
     "การล็อกจะตรึงรายการและการเลือกไว้ เพื่อไม่ให้มีอะไรเปลี่ยนหลังจากทุกคนจ่ายแล้ว",
   "totals.noParticipants": "ยังไม่มีใครเข้าร่วม",
+  "totals.addHandlePrompt": "ใส่ช่องทางรับเงินของคุณ เพื่อให้ทุกคนจ่ายคืนได้",
+  "totals.addHandleAction": "เพิ่มช่องทาง",
 
   "settle.payAmount": "จ่าย {name} {amount}",
   "settle.payVia": "จ่าย {name} ทาง {handle}",
@@ -221,6 +226,7 @@ export const th: Messages = {
   "settle.handlePlaceholder": "your-handle",
   "settle.couldNotSave": "บันทึกชื่อผู้ใช้นั้นไม่ได้",
   "settle.methodOther": "อื่น ๆ",
+  "settle.handleRule": "ใช้ได้เฉพาะตัวอักษร ตัวเลข และ . _ + - เท่านั้น",
 
   "qr.title": "คิวอาร์โค้ดของบิล {code}",
   "qr.hint": "ส่องกล้องที่โค้ดนี้เพื่อเปิดบิล",
@@ -237,4 +243,6 @@ export const th: Messages = {
   "share.unclaimed": "ยังไม่มีคนเลือก: {amount} รอแบ่ง",
   "share.openBill": "เปิดบิล: {url}",
   "share.code": "รหัส: {code}",
+  "share.payThemBack": "จ่ายคืนได้ที่:",
+  "share.payLine": "{name} — {method}: {target}",
 };

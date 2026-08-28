@@ -7,6 +7,12 @@ import {
   formatHandle,
   paymentMethodLabel,
 } from "../lib/paymentLinks";
+import {
+  clearPaymentPreference,
+  getPaymentPreference,
+  setPaymentPreference,
+} from "../lib/userPreferences";
+import PaymentFields from "./PaymentFields";
 import { useT } from "../lib/i18n/context";
 
 interface PaymentSetupProps {
@@ -15,9 +21,10 @@ interface PaymentSetupProps {
   secret: string;
   currentMethod: PaymentMethod | undefined;
   currentHandle: string | undefined;
+  /** Owned by the parent so the "add your handle" prompt can open the editor. */
+  isEditing: boolean;
+  onEditingChange: (isEditing: boolean) => void;
 }
-
-const METHODS: PaymentMethod[] = ["venmo", "cashapp", "paypal", "other"];
 
 /**
  * Where the person owed money says how to send it to them.
@@ -25,19 +32,28 @@ const METHODS: PaymentMethod[] = ["venmo", "cashapp", "paypal", "other"];
  * Only ever rendered for yourself. Letting anyone edit anyone else's handle
  * would make redirecting a repayment a one-tap operation for a stranger who
  * guessed the bill code.
+ *
+ * Whatever is saved here is also kept on the device, so the next bill starts
+ * with it already filled in.
  */
 export default function PaymentSetup({
   participantId,
   secret,
   currentMethod,
   currentHandle,
+  isEditing,
+  onEditingChange,
 }: PaymentSetupProps) {
   const t = useT();
   const setPaymentInfo = useMutation(api.participants.setPaymentInfo);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [method, setMethod] = useState<PaymentMethod>(currentMethod ?? "venmo");
-  const [handle, setHandle] = useState(currentHandle ?? "");
+  // Falling back to the device preference matters when it could not be applied
+  // automatically - an older bill, or a save that failed while offline.
+  const saved = getPaymentPreference();
+  const [method, setMethod] = useState<PaymentMethod>(
+    currentMethod ?? saved?.method ?? "venmo",
+  );
+  const [handle, setHandle] = useState(currentHandle ?? saved?.handle ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -51,7 +67,10 @@ export default function PaymentSetup({
         paymentMethod: method,
         paymentHandle: handle,
       });
-      setIsEditing(false);
+      // Only remembered once the server has accepted it, so a rejected handle
+      // is not carried forward to every future bill.
+      setPaymentPreference(method, handle);
+      onEditingChange(false);
     } catch (err) {
       setError(
         err instanceof Error
@@ -70,21 +89,30 @@ export default function PaymentSetup({
     setError(null);
     try {
       await setPaymentInfo({ participantId, secret, paymentHandle: "" });
+      clearPaymentPreference();
       setHandle("");
-      setIsEditing(false);
+      onEditingChange(false);
     } finally {
       setIsSaving(false);
     }
   }
 
   if (!isEditing) {
+    const hasHandle =
+      currentHandle !== undefined && currentMethod !== undefined;
     return (
       <button
         type="button"
-        onClick={() => setIsEditing(true)}
-        className="min-h-11 text-sm font-bold text-ink underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        onClick={() => onEditingChange(true)}
+        className={`inline-flex min-h-11 items-center rounded-full border-2 border-line px-4 text-sm font-bold transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:translate-y-px ${
+          // Nothing to be paid by yet is the state worth drawing attention to,
+          // so it gets the filled treatment and a set handle steps back.
+          hasHandle
+            ? "bg-surface text-ink-2"
+            : "bg-accent text-accent-ink shadow-hard-sm active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+        }`}
       >
-        {currentHandle && currentMethod
+        {hasHandle
           ? t("settle.paidViaChange", {
               method: paymentMethodLabel(
                 currentMethod,
@@ -99,45 +127,13 @@ export default function PaymentSetup({
 
   return (
     <div className="mt-2 space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {METHODS.map((option) => (
-          <button
-            key={option}
-            type="button"
-            onClick={() => setMethod(option)}
-            aria-pressed={method === option}
-            className={`min-h-11 rounded-full border-2 border-line px-3.5 text-sm font-bold transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-              method === option
-                ? "bg-accent text-accent-ink shadow-hard-sm active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
-                : "bg-surface text-ink-2 active:translate-y-px"
-            }`}
-          >
-            {paymentMethodLabel(option, t("settle.methodOther"))}
-          </button>
-        ))}
-      </div>
-
-      <div className="flex gap-2">
-        <label className="sr-only" htmlFor={`handle-${participantId}`}>
-          {t("settle.handleLabel", {
-            method: paymentMethodLabel(method, t("settle.methodOther")),
-          })}
-        </label>
-        <input
-          id={`handle-${participantId}`}
-          type="text"
-          value={handle}
-          onChange={(e) => setHandle(e.target.value)}
-          placeholder={
-            method === "paypal"
-              ? t("settle.paypalPlaceholder")
-              : t("settle.handlePlaceholder")
-          }
-          autoCapitalize="none"
-          autoCorrect="off"
-          spellCheck={false}
-          className="min-h-11 flex-1 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-        />
+      <PaymentFields
+        method={method}
+        handle={handle}
+        onMethodChange={setMethod}
+        onHandleChange={setHandle}
+        idPrefix={`settle-${participantId}`}
+      >
         <button
           type="button"
           onClick={handleSave}
@@ -146,7 +142,7 @@ export default function PaymentSetup({
         >
           {t("common.save")}
         </button>
-      </div>
+      </PaymentFields>
 
       {error && <p className="text-sm font-semibold text-alert-ink">{error}</p>}
 
@@ -154,7 +150,7 @@ export default function PaymentSetup({
         <button
           type="button"
           onClick={() => {
-            setIsEditing(false);
+            onEditingChange(false);
             setError(null);
             setHandle(currentHandle ?? "");
           }}

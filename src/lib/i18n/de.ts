@@ -33,6 +33,9 @@ export const de: Messages = {
 
   "home.gotACode": "Hast du einen Code?",
   "home.optional": "optional",
+  "home.gettingPaidBack": "Zahlungsweg",
+  "home.payHint":
+    "Wird auf diesem Gerät gespeichert und zu jeder Rechnung hinzugefügt, die du startest oder der du beitrittst.",
   "home.billFound": "Rechnung gefunden!",
   "home.noBillWithCode": "Keine Rechnung mit diesem Code",
   "home.joining": "Beitreten...",
@@ -214,6 +217,9 @@ export const de: Messages = {
   "totals.lockingExplainer":
     "Sperren friert Positionen und Ansprüche ein, damit sich nach dem Bezahlen nichts mehr ändert.",
   "totals.noParticipants": "Noch niemand dabei",
+  "totals.addHandlePrompt":
+    "Hinterlege deinen Zahlungsweg, damit dir alle Geld zurückschicken können.",
+  "totals.addHandleAction": "Hinzufügen",
 
   "settle.payAmount": "{name} {amount} zahlen",
   "settle.payVia": "{name} über {handle} bezahlen",
@@ -229,6 +235,7 @@ export const de: Messages = {
   "settle.handlePlaceholder": "dein-name",
   "settle.couldNotSave": "Der Name konnte nicht gespeichert werden.",
   "settle.methodOther": "Andere",
+  "settle.handleRule": "Nur Buchstaben, Zahlen und . _ + - erlaubt.",
 
   "qr.title": "QR-Code für Rechnung {code}",
   "qr.hint": "Richte eine Kamera darauf, um die Rechnung zu öffnen.",
@@ -245,4 +252,6 @@ export const de: Messages = {
   "share.unclaimed": "Offen: {amount} noch aufzuteilen",
   "share.openBill": "Rechnung öffnen: {url}",
   "share.code": "Code: {code}",
+  "share.payThemBack": "So zahlst du zurück:",
+  "share.payLine": "{name} — {method}: {target}",
 };

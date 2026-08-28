@@ -15,7 +15,21 @@ import {
   updateMerchantNameInBillHistory,
   BillHistoryEntry,
 } from "../lib/billHistory";
-import { getLastUsedName, setLastUsedName } from "../lib/userPreferences";
+import {
+  getLastUsedName,
+  setLastUsedName,
+  getPaymentPreference,
+  setPaymentPreference,
+  clearPaymentPreference,
+  PaymentPreference,
+} from "../lib/userPreferences";
+import {
+  PaymentMethod,
+  formatHandle,
+  isValidPaymentHandle,
+  paymentMethodLabel,
+} from "../lib/paymentLinks";
+import PaymentFields from "../components/PaymentFields";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import Mark, { Wordmark } from "../components/Mark";
 import ThemeToggle from "../components/ThemeToggle";
@@ -48,13 +62,50 @@ export default function Home() {
     code.length >= 6 ? { code } : "skip",
   );
 
-  // Pre-fill name from localStorage on mount
+  // How this device gets paid back. Set once here, and Session.tsx copies it
+  // onto every bill, so nobody has to find the field inside a bill at the
+  // moment everyone is trying to leave the restaurant.
+  const [payment, setPayment] = useState<PaymentPreference | null>(null);
+  const [isEditingPayment, setIsEditingPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("venmo");
+  const [paymentHandle, setPaymentHandle] = useState("");
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // Pre-fill name and payment handle from localStorage on mount
   useEffect(() => {
     const savedName = getLastUsedName();
     if (savedName) {
       setName(savedName);
     }
+    const savedPayment = getPaymentPreference();
+    if (savedPayment) {
+      setPayment(savedPayment);
+      setPaymentMethod(savedPayment.method);
+      setPaymentHandle(savedPayment.handle);
+    }
   }, []);
+
+  function handleSavePayment() {
+    // The server applies this same rule when the handle reaches a bill. Failing
+    // here means it fails in front of the person who typed it, rather than
+    // silently never being applied.
+    if (!isValidPaymentHandle(paymentHandle)) {
+      setPaymentError(t("settle.handleRule"));
+      return;
+    }
+    setPaymentPreference(paymentMethod, paymentHandle);
+    setPayment(getPaymentPreference());
+    setPaymentError(null);
+    setIsEditingPayment(false);
+  }
+
+  function handleRemovePayment() {
+    clearPaymentPreference();
+    setPayment(null);
+    setPaymentHandle("");
+    setPaymentError(null);
+    setIsEditingPayment(false);
+  }
 
   // Check localStorage for stored credentials when session is found
   useEffect(() => {
@@ -326,6 +377,96 @@ export default function Home() {
                 </p>
               )}
             </div>
+          </div>
+
+          {/* How you get paid back (optional, saved on this device) */}
+          <div className="space-y-2">
+            <span className="block text-sm font-semibold text-ink-2">
+              {t("home.gettingPaidBack")}{" "}
+              <span className="font-normal text-ink-3">
+                {t("home.optional")}
+              </span>
+            </span>
+
+            {isEditingPayment ? (
+              <>
+                <PaymentFields
+                  method={paymentMethod}
+                  handle={paymentHandle}
+                  onMethodChange={setPaymentMethod}
+                  onHandleChange={(value) => {
+                    setPaymentHandle(value);
+                    setPaymentError(null);
+                  }}
+                  idPrefix="home-payment"
+                  autoFocus
+                >
+                  <button
+                    type="button"
+                    onClick={handleSavePayment}
+                    disabled={paymentHandle.trim() === ""}
+                    className="min-h-11 rounded-full border-2 border-line bg-accent px-4 font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:border-ink-4 disabled:bg-surface disabled:text-ink-4 disabled:shadow-none"
+                  >
+                    {t("common.save")}
+                  </button>
+                </PaymentFields>
+
+                {paymentError ? (
+                  <p
+                    role="alert"
+                    className="text-sm font-semibold text-alert-ink"
+                  >
+                    {paymentError}
+                  </p>
+                ) : (
+                  <p className="text-xs text-ink-3">{t("home.payHint")}</p>
+                )}
+
+                <div className="flex gap-3 text-sm">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsEditingPayment(false);
+                      setPaymentError(null);
+                      setPaymentMethod(payment?.method ?? "venmo");
+                      setPaymentHandle(payment?.handle ?? "");
+                    }}
+                    className="min-h-11 font-semibold text-ink-2 underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                  {payment && (
+                    <button
+                      type="button"
+                      onClick={handleRemovePayment}
+                      className="min-h-11 font-semibold text-alert underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
+                      {t("common.remove")}
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setIsEditingPayment(true)}
+                className={`inline-flex min-h-11 items-center rounded-full border-2 border-line px-4 text-sm font-bold transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-y-px ${
+                  payment
+                    ? "bg-surface text-ink-2"
+                    : "bg-surface text-ink shadow-hard-sm active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                }`}
+              >
+                {payment
+                  ? t("settle.paidViaChange", {
+                      method: paymentMethodLabel(
+                        payment.method,
+                        t("settle.methodOther"),
+                      ),
+                      handle: formatHandle(payment.method, payment.handle),
+                    })
+                  : t("settle.addHandle")}
+              </button>
+            )}
           </div>
 
           {/* Error display */}

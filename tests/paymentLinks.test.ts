@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
   buildPaymentUrl,
+  buildProfileUrl,
   formatHandle,
+  isValidPaymentHandle,
+  normalizePaymentHandle,
   PAYMENT_METHOD_LABELS,
 } from "../src/lib/paymentLinks";
 
@@ -79,5 +82,50 @@ describe("PAYMENT_METHOD_LABELS", () => {
       "paypal",
       "venmo",
     ]);
+  });
+});
+
+describe("buildProfileUrl", () => {
+  it("points at the payee's page, with no amount attached", () => {
+    expect(buildProfileUrl("venmo", "jeremie-h")).toBe(
+      "https://venmo.com/u/jeremie-h",
+    );
+    expect(buildProfileUrl("cashapp", "jeremie")).toBe(
+      "https://cash.app/$jeremie",
+    );
+    expect(buildProfileUrl("paypal", "jeremie")).toBe(
+      "https://paypal.me/jeremie",
+    );
+  });
+
+  it("has no link to offer for a handle typed into some other app", () => {
+    expect(buildProfileUrl("other", "jeremie")).toBeNull();
+  });
+
+  it("encodes the handle, so a crafted one cannot reshape the URL", () => {
+    expect(buildProfileUrl("venmo", "victim/../attacker")).toBe(
+      "https://venmo.com/u/victim%2F..%2Fattacker",
+    );
+  });
+});
+
+describe("normalizePaymentHandle", () => {
+  it("drops the sigil people write in front of their own handle", () => {
+    expect(normalizePaymentHandle("  @jeremie-h ")).toBe("jeremie-h");
+  });
+});
+
+describe("isValidPaymentHandle", () => {
+  it("accepts what the server accepts", () => {
+    expect(isValidPaymentHandle("@jeremie-h")).toBe(true);
+    expect(isValidPaymentHandle("j.hassan_1+pay")).toBe(true);
+  });
+
+  it("rejects what the server would reject, before it is saved", () => {
+    expect(isValidPaymentHandle("")).toBe(false);
+    expect(isValidPaymentHandle("   ")).toBe(false);
+    expect(isValidPaymentHandle("victim/../attacker")).toBe(false);
+    expect(isValidPaymentHandle("has space")).toBe(false);
+    expect(isValidPaymentHandle("a".repeat(65))).toBe(false);
   });
 });

@@ -28,6 +28,9 @@ export const es: Messages = {
 
   "home.gotACode": "¿Tienes un código?",
   "home.optional": "opcional",
+  "home.gettingPaidBack": "Cómo te pagan",
+  "home.payHint":
+    "Se guarda en este dispositivo y se agrega a cada cuenta que abras o a la que te unas.",
   "home.billFound": "¡Cuenta encontrada!",
   "home.noBillWithCode": "No hay ninguna cuenta con este código",
   "home.joining": "Entrando...",
@@ -208,6 +211,8 @@ export const es: Messages = {
   "totals.lockingExplainer":
     "Cerrar la cuenta congela los artículos y los reclamos para que nada cambie después de que la gente pague.",
   "totals.noParticipants": "Todavía no hay nadie",
+  "totals.addHandlePrompt": "Agrega tu usuario para que todos puedan pagarte.",
+  "totals.addHandleAction": "Agregar usuario",
 
   "settle.payAmount": "Pagar {amount} a {name}",
   "settle.payVia": "Págale a {name} por {handle}",
@@ -223,6 +228,7 @@ export const es: Messages = {
   "settle.handlePlaceholder": "tu-usuario",
   "settle.couldNotSave": "No se pudo guardar ese usuario.",
   "settle.methodOther": "Otro",
+  "settle.handleRule": "Usa solo letras, números y . _ + -.",
 
   "qr.title": "Código QR de la cuenta {code}",
   "qr.hint": "Apunta una cámara aquí para abrir la cuenta.",
@@ -239,4 +245,6 @@ export const es: Messages = {
   "share.unclaimed": "Sin reclamar: faltan {amount} por dividir",
   "share.openBill": "Abre la cuenta: {url}",
   "share.code": "Código: {code}",
+  "share.payThemBack": "Págales así:",
+  "share.payLine": "{name} — {method}: {target}",
 };

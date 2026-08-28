@@ -31,6 +31,9 @@ export const en = {
   // --- Home ---------------------------------------------------------------
   "home.gotACode": "Got a code?",
   "home.optional": "optional",
+  "home.gettingPaidBack": "Getting paid back",
+  "home.payHint":
+    "Saved on this device and added to every bill you start or join.",
   "home.billFound": "Bill found!",
   "home.noBillWithCode": "No bill with this code",
   "home.joining": "Joining...",
@@ -216,6 +219,8 @@ export const en = {
   "totals.lockingExplainer":
     "Locking freezes items and claims so nothing changes after people pay.",
   "totals.noParticipants": "No participants yet",
+  "totals.addHandlePrompt": "Add your handle so everyone can pay you back.",
+  "totals.addHandleAction": "Add handle",
 
   // --- Settle up ----------------------------------------------------------
   "settle.payAmount": "Pay {name} {amount}",
@@ -232,6 +237,7 @@ export const en = {
   "settle.handlePlaceholder": "your-handle",
   "settle.couldNotSave": "Could not save that handle.",
   "settle.methodOther": "Other",
+  "settle.handleRule": "Use letters, numbers and . _ + - only.",
 
   // --- QR -----------------------------------------------------------------
   "qr.title": "QR code for bill {code}",
@@ -252,6 +258,8 @@ export const en = {
   "share.unclaimed": "Unclaimed: {amount} still to be split",
   "share.openBill": "Open the bill: {url}",
   "share.code": "Code: {code}",
+  "share.payThemBack": "Pay them back:",
+  "share.payLine": "{name} — {method}: {target}",
 };
 
 export type Messages = typeof en;

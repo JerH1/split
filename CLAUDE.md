@@ -73,6 +73,26 @@ To run a single test file: `npx vitest run convex/calculations.test.ts`
 - `components/Summary.tsx` — Per-person breakdown (subtotal + proportional tax/tip)
 - `components/TaxTipSettings.tsx` — Configure tax/tip (percent of subtotal, percent of total, or fixed)
 
+### Getting paid back
+
+Whoever is owed money says how to send it: a method (Venmo, Cash App, PayPal,
+Other) and a handle, set in `components/PaymentSetup.tsx` on their own row in
+Totals. Only ever your own — `participants.setPaymentInfo` proves it with your
+secret, because a participant ID is public and redirecting someone else's
+repayment would otherwise be one tap for anyone holding the bill code.
+
+- The same answer is asked for on the home screen and kept on the device in
+  `lib/userPreferences.ts`. `pages/Session.tsx` copies it onto each bill as you
+  arrive, filling a blank only — a handle already on a bill was set deliberately.
+- `components/PaymentFields.tsx` is the shared pair of controls, so both places
+  ask identically. `lib/paymentLinks.ts` mirrors the server's handle rules so a
+  handle typed on the home screen — which reaches no server until a bill exists
+  — fails in front of the person who typed it.
+- Two kinds of link, and the difference matters. `buildPaymentUrl` prefills an
+  amount and belongs inside a bill, where the reader's share is known.
+  `buildProfileUrl` carries no amount and is what goes into the shared summary,
+  which several people read and each owes something different.
+
 ### Theming
 
 Two themes ship: **Snack Pack** (light) and **Night Snack** (dark), swapped by

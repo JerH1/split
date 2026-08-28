@@ -7,10 +7,18 @@
  */
 
 import { formatMoney } from "./money";
+import {
+  PaymentMethod,
+  buildProfileUrl,
+  formatHandle,
+  paymentMethodLabel,
+} from "./paymentLinks";
 
 export interface ShareablePerson {
   name: string;
   total: number; // cents
+  paymentMethod?: PaymentMethod;
+  paymentHandle?: string;
 }
 
 /**
@@ -27,7 +35,10 @@ export type Translate = (
     | "share.total"
     | "share.unclaimed"
     | "share.openBill"
-    | "share.code",
+    | "share.code"
+    | "share.payThemBack"
+    | "share.payLine"
+    | "settle.methodOther",
   vars?: Record<string, string | number>,
 ) => string;
 
@@ -67,6 +78,28 @@ export function buildSummaryText(
   // not, so the gap is stated rather than left to be discovered later.
   if (unclaimedTotal > 0) {
     parts.push(t("share.unclaimed", { amount: formatMoney(unclaimedTotal) }));
+  }
+
+  // Whoever fronted the bill is owed by everyone reading this, and the group
+  // chat is where they will actually settle up - so the handles have to travel
+  // with the numbers. A profile link rather than a prefilled one: each reader
+  // owes a different amount, so any amount baked in here would be wrong for
+  // everyone but one of them.
+  const payLines = people
+    .filter((person) => person.paymentMethod && person.paymentHandle)
+    .map((person) => {
+      const method = person.paymentMethod!;
+      const handle = person.paymentHandle!;
+      return t("share.payLine", {
+        name: person.name,
+        method: paymentMethodLabel(method, t("settle.methodOther")),
+        // "Other" has no profile page, so the handle itself is the useful part.
+        target: buildProfileUrl(method, handle) ?? formatHandle(method, handle),
+      });
+    });
+
+  if (payLines.length > 0) {
+    parts.push("", t("share.payThemBack"), ...payLines);
   }
 
   parts.push(

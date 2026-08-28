@@ -36,6 +36,7 @@ export default function Summary() {
   const [shareState, setShareState] = useState<"idle" | "copied" | "failed">(
     "idle",
   );
+  const [isEditingPayment, setIsEditingPayment] = useState(false);
 
   if (!totals) {
     return (
@@ -72,7 +73,12 @@ export default function Summary() {
 
     const text = buildSummaryText(
       {
-        people: participants.map((p) => ({ name: p.name, total: p.total })),
+        people: participants.map((p) => ({
+          name: p.name,
+          total: p.total,
+          paymentMethod: p.paymentMethod,
+          paymentHandle: p.paymentHandle,
+        })),
         merchant: session.merchant,
         code: session.code,
         billUrl,
@@ -100,9 +106,41 @@ export default function Summary() {
     });
   }
 
+  // The host is the one who usually put the whole bill on their card, so they
+  // are the one everyone needs a handle for. Nothing asks them for it, and the
+  // field is a tap inside their own row, so without this most bills end with
+  // "what's your Venmo?" in a group chat - the thing this app exists to avoid.
+  const shouldPromptForHandle =
+    isHost &&
+    me !== undefined &&
+    me.paymentHandle === undefined &&
+    participants.length > 1;
+
+  function openPaymentEditor() {
+    if (!me) return;
+    setExpandedParticipant(me.participantId);
+    setIsEditingPayment(true);
+  }
+
   return (
     <div className="space-y-3 p-4">
       <h1 className="sr-only">{t("totals.documentTitle")}</h1>
+
+      {/* Nudge the host to say how they get paid back */}
+      {shouldPromptForHandle && !isEditingPayment && (
+        <div className="flex flex-wrap items-center gap-2 rounded-tile border-card border-line bg-surface p-3 shadow-hard-sm">
+          <span className="flex-1 text-sm font-semibold text-ink">
+            {t("totals.addHandlePrompt")}
+          </span>
+          <button
+            type="button"
+            onClick={openPaymentEditor}
+            className="inline-flex min-h-11 items-center rounded-full border-2 border-line bg-accent px-4 text-sm font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+          >
+            {t("totals.addHandleAction")}
+          </button>
+        </div>
+      )}
 
       {/* Unclaimed Warning */}
       {unclaimedItems.length > 0 && (
@@ -297,6 +335,8 @@ export default function Summary() {
                         secret={secret}
                         currentMethod={participant.paymentMethod}
                         currentHandle={participant.paymentHandle}
+                        isEditing={isEditingPayment}
+                        onEditingChange={setIsEditingPayment}
                       />
                     )}
                   </div>

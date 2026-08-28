@@ -73,6 +73,76 @@ describe("buildSummaryText", () => {
     expect(text).toContain("Code: ABC123");
   });
 
+  it("carries each person's handle, so the chat can settle up from the paste", () => {
+    const text = buildSummaryText(
+      {
+        ...base,
+        people: [
+          {
+            name: "Jeremie",
+            total: 2431,
+            paymentMethod: "venmo" as const,
+            paymentHandle: "jeremie-h",
+          },
+          { name: "Sam", total: 1820 },
+        ],
+      },
+      t,
+    );
+
+    expect(text).toContain("Pay them back:");
+    expect(text).toContain("Jeremie — Venmo: https://venmo.com/u/jeremie-h");
+    // Sam never said how to pay them, so Sam gets no line rather than a broken one.
+    expect(text).not.toContain("Sam — ");
+  });
+
+  it("links to a profile, not a prefilled amount", () => {
+    // Everyone reading the paste owes something different, so an amount baked
+    // into the link would be wrong for all but one of them.
+    const text = buildSummaryText(
+      {
+        ...base,
+        people: [
+          {
+            name: "Jeremie",
+            total: 2431,
+            paymentMethod: "venmo" as const,
+            paymentHandle: "jeremie-h",
+          },
+        ],
+      },
+      t,
+    );
+
+    expect(text).not.toContain("24.31&");
+    expect(text).not.toContain("txn=pay");
+  });
+
+  it("falls back to the bare handle for a method with no profile page", () => {
+    const text = buildSummaryText(
+      {
+        ...base,
+        people: [
+          {
+            name: "Sam",
+            total: 1820,
+            paymentMethod: "other" as const,
+            paymentHandle: "sam.pay",
+          },
+        ],
+      },
+      t,
+    );
+
+    expect(text).toContain("Sam — Other: sam.pay");
+    expect(text).not.toContain("venmo.com");
+    expect(text).not.toContain("cash.app");
+  });
+
+  it("omits the pay-back block entirely when nobody has a handle", () => {
+    expect(buildSummaryText(base, t)).not.toContain("Pay them back");
+  });
+
   it("keeps amounts in dollars whatever the language", () => {
     // The receipt on the table is printed "$24.31". Rendering it as "24,31 $"
     // for a German reader would put the app and the paper in visible
