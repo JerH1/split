@@ -239,4 +239,190 @@ describe("sessions authorization", () => {
       ).rejects.toThrow("Participant not in this session");
     });
   });
+  describe("deleteByCode", () => {
+    // Build a session with one of every child row so cascade behavior is visible
+    async function seedFullSession(t: ReturnType<typeof convexTest>) {
+      return await t.run(async (ctx) => {
+        const sessionId = await ctx.db.insert("sessions", {
+          code: "ABC123",
+          hostName: "Host",
+          createdAt: Date.now(),
+        });
+        const hostParticipantId = await ctx.db.insert("participants", {
+          sessionId,
+          name: "Host",
+          isHost: true,
+          joinedAt: Date.now(),
+        });
+        const guestParticipantId = await ctx.db.insert("participants", {
+          sessionId,
+          name: "Guest",
+          isHost: false,
+          joinedAt: Date.now(),
+        });
+        const itemId = await ctx.db.insert("items", {
+          sessionId,
+          name: "Burger",
+          price: 1200,
+          quantity: 1,
+        });
+        await ctx.db.insert("claims", {
+          sessionId,
+          itemId,
+          participantId: guestParticipantId,
+        });
+        await ctx.db.insert("fees", {
+          sessionId,
+          label: "Sales Tax",
+          amount: 100,
+        });
+        return { sessionId, hostParticipantId, guestParticipantId };
+      });
+    }
+
+    async function countAllRows(t: ReturnType<typeof convexTest>) {
+      return await t.run(async (ctx) => ({
+        sessions: (await ctx.db.query("sessions").collect()).length,
+        participants: (await ctx.db.query("participants").collect()).length,
+        items: (await ctx.db.query("items").collect()).length,
+        claims: (await ctx.db.query("claims").collect()).length,
+        fees: (await ctx.db.query("fees").collect()).length,
+      }));
+    }
+
+    it("allows host to delete the bill", async () => {
+      const t = convexTest(schema);
+      const { hostParticipantId } = await seedFullSession(t);
+
+      await t.mutation(api.sessions.deleteByCode, {
+        code: "ABC123",
+        participantId: hostParticipantId,
+      });
+
+      const session = await t.run(async (ctx) =>
+        ctx.db
+          .query("sessions")
+          .withIndex("by_code", (q) => q.eq("code", "ABC123"))
+          .first(),
+      );
+      expect(session).toBeNull();
+    });
+
+    it("deletes every child row, leaving nothing orphaned", async () => {
+      const t = convexTest(schema);
+      const { hostParticipantId } = await seedFullSession(t);
+
+      await t.mutation(api.sessions.deleteByCode, {
+        code: "ABC123",
+        participantId: hostParticipantId,
+      });
+
+      expect(await countAllRows(t)).toEqual({
+        sessions: 0,
+        participants: 0,
+        items: 0,
+        claims: 0,
+        fees: 0,
+      });
+    });
+
+    it("deletes the uploaded receipt image from file storage", async () => {
+      const t = convexTest(schema);
+      const { sessionId, hostParticipantId } = await seedFullSession(t);
+
+      const storageId = await t.run(async (ctx) => {
+        const storageId = await ctx.storage.store(
+          new Blob(["receipt bytes"], { type: "image/jpeg" }),
+        );
+        await ctx.db.patch(sessionId, { receiptImageId: storageId });
+        return storageId;
+      });
+
+      await t.mutation(api.sessions.deleteByCode, {
+        code: "ABC123",
+        participantId: hostParticipantId,
+      });
+
+      const url = await t.run(async (ctx) => ctx.storage.getUrl(storageId));
+      expect(url).toBeNull();
+    });
+
+    it("rejects a non-host participant and leaves the bill intact", async () => {
+      const t = convexTest(schema);
+      const { guestParticipantId } = await seedFullSession(t);
+
+      await expect(
+        t.mutation(api.sessions.deleteByCode, {
+          code: "ABC123",
+          participantId: guestParticipantId,
+        }),
+      ).rejects.toThrow("Only the host can delete this bill");
+
+      expect(await countAllRows(t)).toEqual({
+        sessions: 1,
+        participants: 2,
+        items: 1,
+        claims: 1,
+        fees: 1,
+      });
+    });
+
+    it("rejects a host of a different session", async () => {
+      const t = convexTest(schema);
+      await seedFullSession(t);
+
+      const otherSessionHostId = await t.run(async (ctx) => {
+        const otherSessionId = await ctx.db.insert("sessions", {
+          code: "XYZ789",
+          hostName: "Host2",
+          createdAt: Date.now(),
+        });
+        return await ctx.db.insert("participants", {
+          sessionId: otherSessionId,
+          name: "Host2",
+          isHost: true,
+          joinedAt: Date.now(),
+        });
+      });
+
+      await expect(
+        t.mutation(api.sessions.deleteByCode, {
+          code: "ABC123",
+          participantId: otherSessionHostId,
+        }),
+      ).rejects.toThrow("Participant not in this session");
+
+      const session = await t.run(async (ctx) =>
+        ctx.db
+          .query("sessions")
+          .withIndex("by_code", (q) => q.eq("code", "ABC123"))
+          .first(),
+      );
+      expect(session).not.toBeNull();
+    });
+
+    it("normalizes the code before looking up the session", async () => {
+      const t = convexTest(schema);
+      const { hostParticipantId } = await seedFullSession(t);
+
+      await t.mutation(api.sessions.deleteByCode, {
+        code: "  abc123  ",
+        participantId: hostParticipantId,
+      });
+
+      expect((await countAllRows(t)).sessions).toBe(0);
+    });
+
+    it("is a no-op for a code that does not exist", async () => {
+      const t = convexTest(schema);
+      const { hostParticipantId } = await seedFullSession(t);
+
+      await t.mutation(api.sessions.deleteByCode, {
+        code: "NOSUCH",
+        participantId: hostParticipantId,
+      });
+
+      expect((await countAllRows(t)).sessions).toBe(1);
+    });
+  });
 });
