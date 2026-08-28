@@ -83,9 +83,16 @@ export const deleteByCode = mutation({
       await ctx.db.delete(sessionParticipant._id);
     }
 
-    // Drop the uploaded receipt too, otherwise it lingers in file storage
+    // Drop the uploaded receipt too, otherwise it lingers in file storage.
+    // Best effort on purpose: a missing file is already the desired end
+    // state, and letting the throw escape would roll back every delete
+    // above it and leave the bill permanently undeletable.
     if (session.receiptImageId) {
-      await ctx.storage.delete(session.receiptImageId);
+      try {
+        await ctx.storage.delete(session.receiptImageId);
+      } catch (error) {
+        console.error("Failed to delete receipt image:", error);
+      }
     }
 
     await ctx.db.delete(session._id);
