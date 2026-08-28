@@ -11,9 +11,15 @@ interface InlineItemProps {
     quantity: number;
   };
   participantId: Id<"participants"> | null;
+  /** The current user's secret. Every mutation below has to present it. */
+  secret: string;
 }
 
-export default function InlineItem({ item, participantId }: InlineItemProps) {
+export default function InlineItem({
+  item,
+  participantId,
+  secret,
+}: InlineItemProps) {
   // New items (empty name) auto-enter edit mode
   const [isEditing, setIsEditing] = useState(item.name === "");
 
@@ -54,6 +60,7 @@ export default function InlineItem({ item, participantId }: InlineItemProps) {
     await updateItem({
       itemId: item._id,
       participantId,
+      secret,
       name: editName,
       price: priceInCents,
       quantity: editQuantity,
@@ -64,7 +71,7 @@ export default function InlineItem({ item, participantId }: InlineItemProps) {
 
   async function handleDelete() {
     if (!participantId) return;
-    await removeItem({ itemId: item._id, participantId });
+    await removeItem({ itemId: item._id, participantId, secret });
   }
 
   // View mode

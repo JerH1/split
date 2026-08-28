@@ -1,19 +1,21 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { validateMoney } from "./validation";
+import { requireHost } from "./auth";
+import {
+  MAX_FEES_PER_SESSION,
+  stripInvisible,
+  validateMoney,
+} from "./validation";
 
 // Max label length for fee labels
 const MAX_FEE_LABEL_LENGTH = 100;
-
-// Max fees per session for bulk operations
-const MAX_FEES_PER_SESSION = 50;
 
 /**
  * Validate and trim a fee label.
  * Fee labels are the exact text from receipts (e.g., "Philadelphia Liquor Tax").
  */
 function validateFeeLabel(label: string): string {
-  const trimmed = label.trim();
+  const trimmed = stripInvisible(label).trim();
   if (trimmed.length === 0) {
     throw new Error("Fee label cannot be empty");
   }
@@ -41,19 +43,26 @@ export const add = mutation({
   args: {
     sessionId: v.id("sessions"),
     participantId: v.id("participants"),
+    secret: v.string(),
     label: v.string(),
     amount: v.number(),
   },
   handler: async (ctx, args) => {
-    // Verify participant exists and is host
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || !participant.isHost) {
-      throw new Error("Only the host can add fees");
-    }
+    await requireHost(
+      ctx,
+      args.sessionId,
+      args.participantId,
+      args.secret,
+      "add fees",
+    );
 
-    // Verify participant's session matches the target session
-    if (participant.sessionId !== args.sessionId) {
-      throw new Error("Participant not in this session");
+    // Cap the list, same as the bulk path
+    const existingFees = await ctx.db
+      .query("fees")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+    if (existingFees.length >= MAX_FEES_PER_SESSION) {
+      throw new Error(`Too many fees (max ${MAX_FEES_PER_SESSION})`);
     }
 
     // Validate inputs
@@ -74,6 +83,7 @@ export const addBulk = mutation({
   args: {
     sessionId: v.id("sessions"),
     participantId: v.id("participants"),
+    secret: v.string(),
     fees: v.array(
       v.object({
         label: v.string(),
@@ -87,16 +97,13 @@ export const addBulk = mutation({
       throw new Error(`Too many fees (max ${MAX_FEES_PER_SESSION})`);
     }
 
-    // Verify participant is host
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || !participant.isHost) {
-      throw new Error("Only the host can replace all fees");
-    }
-
-    // Verify participant's session matches the target session
-    if (participant.sessionId !== args.sessionId) {
-      throw new Error("Participant not in this session");
-    }
+    await requireHost(
+      ctx,
+      args.sessionId,
+      args.participantId,
+      args.secret,
+      "replace all fees",
+    );
 
     // Validate all fees before making any changes
     const validatedFees = args.fees.map((fee) => ({
@@ -133,6 +140,7 @@ export const update = mutation({
   args: {
     feeId: v.id("fees"),
     participantId: v.id("participants"),
+    secret: v.string(),
     label: v.optional(v.string()),
     amount: v.optional(v.number()),
   },
@@ -143,16 +151,14 @@ export const update = mutation({
       throw new Error("Fee not found");
     }
 
-    // Verify participant exists and is host
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || !participant.isHost) {
-      throw new Error("Only the host can update fees");
-    }
-
-    // Verify participant's session matches the fee's session
-    if (participant.sessionId !== fee.sessionId) {
-      throw new Error("Participant not in this session");
-    }
+    // Host of the fee's own session
+    await requireHost(
+      ctx,
+      fee.sessionId,
+      args.participantId,
+      args.secret,
+      "update fees",
+    );
 
     // Validate and build updates
     const updates: Record<string, unknown> = {};
@@ -172,6 +178,7 @@ export const remove = mutation({
   args: {
     feeId: v.id("fees"),
     participantId: v.id("participants"),
+    secret: v.string(),
   },
   handler: async (ctx, args) => {
     // Verify fee exists
@@ -180,16 +187,14 @@ export const remove = mutation({
       throw new Error("Fee not found");
     }
 
-    // Verify participant exists and is host
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || !participant.isHost) {
-      throw new Error("Only the host can remove fees");
-    }
-
-    // Verify participant's session matches the fee's session
-    if (participant.sessionId !== fee.sessionId) {
-      throw new Error("Participant not in this session");
-    }
+    // Host of the fee's own session
+    await requireHost(
+      ctx,
+      fee.sessionId,
+      args.participantId,
+      args.secret,
+      "remove fees",
+    );
 
     await ctx.db.delete(args.feeId);
   },

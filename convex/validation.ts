@@ -5,6 +5,49 @@
 export const MAX_NAME_LENGTH = 100;
 export const MAX_ITEM_NAME_LENGTH = 200;
 
+// Per-session resource caps. Nothing here is rate limited, so without ceilings
+// a single caller holding one valid code could grow a bill without bound and
+// make every session-scoped query (which collect() the whole table) expensive
+// for everyone else in it.
+export const MAX_PARTICIPANTS_PER_SESSION = 50;
+export const MAX_ITEMS_PER_SESSION = 500;
+export const MAX_FEES_PER_SESSION = 50;
+
+// Receipt uploads. Convex hands the browser a direct upload URL that cannot
+// itself enforce limits, so these are checked against the stored file's
+// metadata before it is attached to a session.
+export const MAX_RECEIPT_BYTES = 10 * 1024 * 1024; // 10 MB
+export const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+] as const;
+
+// Characters that render as nothing, or reorder what follows them. A name like
+// "Alice\u202E" or one padded with zero-width spaces reads as another person's
+// in the roster, which is impersonation in an app where the roster is the only
+// thing identifying who owes what.
+// eslint-disable-next-line no-control-regex
+const INVISIBLE_OR_BIDI =
+  /[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
+
+/** Drop control, zero-width, and bidi-override characters from user text. */
+export function stripInvisible(value: string): string {
+  return value.replace(INVISIBLE_OR_BIDI, "");
+}
+
+/**
+ * Fold a display name to the form used for duplicate detection.
+ *
+ * Compatibility normalization collapses lookalike encodings (fullwidth "Ａlice",
+ * ligatures) onto the same key, so a second "Alice" cannot slip past the
+ * uniqueness check by being spelled with different code points.
+ */
+export function normalizeNameForCompare(name: string): string {
+  return stripInvisible(name).normalize("NFKC").trim().toLowerCase();
+}
+
 // Max value for money (in cents) - $100,000.00
 export const MAX_MONEY_CENTS = 10_000_000;
 
@@ -13,7 +56,7 @@ export const MAX_QUANTITY = 999;
 
 // Validation functions that throw on invalid input
 export function validateName(name: string, fieldName: string = "Name"): string {
-  const trimmed = name.trim();
+  const trimmed = stripInvisible(name).trim();
   if (trimmed.length === 0) {
     throw new Error(`${fieldName} cannot be empty`);
   }
@@ -24,7 +67,7 @@ export function validateName(name: string, fieldName: string = "Name"): string {
 }
 
 export function validateItemName(name: string): string {
-  const trimmed = name.trim();
+  const trimmed = stripInvisible(name).trim();
   if (trimmed.length === 0) {
     throw new Error("Item name cannot be empty");
   }
@@ -82,4 +125,16 @@ export function validateTipPercent(percent: number): number {
     throw new Error("Tip percent cannot exceed 100%");
   }
   return percent;
+}
+
+// Merchant is extracted from a receipt photo by the vision model, not typed
+// by a person, so an over-long value is a parsing artifact rather than abuse.
+// Truncate instead of throwing: rejecting the mutation would surface as a
+// failed receipt scan and lose the items the user actually cares about.
+export function validateMerchant(merchant: string): string {
+  const trimmed = stripInvisible(merchant).trim();
+  if (trimmed.length === 0) {
+    throw new Error("Merchant cannot be empty");
+  }
+  return trimmed.slice(0, MAX_NAME_LENGTH);
 }

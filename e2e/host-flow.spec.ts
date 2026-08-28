@@ -63,7 +63,7 @@ test.describe("Host Flow", () => {
     await page.click('button:has-text("Tax & Tip")');
 
     // Wait for tab content to load - look for the Tip section header
-    await expect(page.locator("h3:has-text('Tip')")).toBeVisible();
+    await expect(page.locator("h2:has-text('Tip')")).toBeVisible();
 
     // The tip input is a percent input (adjacent to % sign) when in percent_subtotal mode
     // Find the input next to the % sign in the Tip section

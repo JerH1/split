@@ -28,6 +28,12 @@ export default defineSchema({
     name: v.string(), // Display name
     isHost: v.boolean(), // Host has extra controls
     joinedAt: v.number(), // Unix timestamp
+    // Bearer secret proving a caller *is* this participant. Participant IDs are
+    // public (the roster and claim list ship them to every client), so the ID
+    // alone authorizes nothing. Optional only so participants created before
+    // secrets existed still validate; they can no longer be authenticated as.
+    // See convex/auth.ts.
+    secret: v.optional(v.string()),
   }).index("by_session", ["sessionId"]), // List participants in a session
 
   // Items are line items from the receipt

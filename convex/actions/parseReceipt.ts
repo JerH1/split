@@ -1,8 +1,10 @@
 "use node";
 
 import { action } from "../_generated/server";
+import { internal } from "../_generated/api";
 import { v } from "convex/values";
 import Anthropic from "@anthropic-ai/sdk";
+import { ALLOWED_IMAGE_TYPES } from "../validation";
 
 const RECEIPT_VALIDATION_PROMPT = `Analyze this image and determine if it is a receipt (a purchase record from a store, restaurant, or service).
 
@@ -190,24 +192,40 @@ type ReceiptValidationResponse =
  * Uses structured outputs beta for guaranteed JSON responses and image validation.
  */
 export const parseReceipt = action({
-  args: { storageId: v.id("_storage") },
+  args: {
+    sessionId: v.id("sessions"),
+    participantId: v.id("participants"),
+    secret: v.string(),
+    storageId: v.id("_storage"),
+  },
   handler: async (ctx, args): Promise<ParsedReceipt> => {
+    // Every call here spends money on a vision request, and reads a file back
+    // out of storage. Authorize before doing either: the caller must host this
+    // session, and storageId must be this session's own receipt.
+    await ctx.runQuery(internal.receipts.assertCanParseReceipt, {
+      sessionId: args.sessionId,
+      participantId: args.participantId,
+      secret: args.secret,
+      storageId: args.storageId,
+    });
+
     // Get the image blob from Convex storage
     const imageBlob = await ctx.storage.get(args.storageId);
     if (!imageBlob) {
       throw new Error("Image not found in storage");
     }
 
+    // Determine media type from blob. saveReceiptImage already rejected
+    // anything that is not an image, but this is what actually gets sent to the
+    // API, so it is checked rather than asserted.
+    const mediaType = imageBlob.type;
+    if (!(ALLOWED_IMAGE_TYPES as readonly string[]).includes(mediaType)) {
+      throw new Error("Receipt must be a JPEG, PNG, GIF, or WebP image");
+    }
+
     // Convert blob to base64
     const arrayBuffer = await imageBlob.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString("base64");
-
-    // Determine media type from blob
-    const mediaType = imageBlob.type as
-      | "image/jpeg"
-      | "image/png"
-      | "image/gif"
-      | "image/webp";
 
     // Initialize Anthropic client (API key from environment)
     const anthropic = new Anthropic({
@@ -227,7 +245,7 @@ export const parseReceipt = action({
               type: "image",
               source: {
                 type: "base64",
-                media_type: mediaType,
+                media_type: mediaType as (typeof ALLOWED_IMAGE_TYPES)[number],
                 data: base64,
               },
             },

@@ -1,6 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { requireHost, requireMember } from "./auth";
 import {
+  MAX_ITEMS_PER_SESSION,
   validateItemName,
   validateMoney,
   validateQuantity,
@@ -22,21 +24,28 @@ export const add = mutation({
   args: {
     sessionId: v.id("sessions"),
     participantId: v.id("participants"),
+    secret: v.string(),
     name: v.string(),
     price: v.number(), // In cents
     quantity: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    // Verify participant exists and belongs to this session
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || participant.sessionId !== args.sessionId) {
-      throw new Error("Not authorized to add items to this session");
-    }
+    // Prove the caller is this session's participant before touching anything
+    await requireMember(ctx, args.sessionId, args.participantId, args.secret);
 
     // Verify session exists
     const session = await ctx.db.get(args.sessionId);
     if (!session) {
       throw new Error("Session not found");
+    }
+
+    // Any participant may add items, so the table needs a ceiling
+    const existingItems = await ctx.db
+      .query("items")
+      .withIndex("by_session", (q) => q.eq("sessionId", args.sessionId))
+      .collect();
+    if (existingItems.length >= MAX_ITEMS_PER_SESSION) {
+      throw new Error(`Too many items (max ${MAX_ITEMS_PER_SESSION})`);
     }
 
     // Validate inputs
@@ -60,6 +69,7 @@ export const update = mutation({
   args: {
     itemId: v.id("items"),
     participantId: v.id("participants"),
+    secret: v.string(),
     name: v.optional(v.string()),
     price: v.optional(v.number()),
     quantity: v.optional(v.number()),
@@ -75,11 +85,8 @@ export const update = mutation({
       throw new Error("Session not found");
     }
 
-    // Verify participant exists and belongs to item's session
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || participant.sessionId !== item.sessionId) {
-      throw new Error("Not authorized to edit items in this session");
-    }
+    // The item's own session is the authority on who may edit it
+    await requireMember(ctx, item.sessionId, args.participantId, args.secret);
 
     // Validate and build updates
     const updates: Record<string, unknown> = {};
@@ -102,24 +109,23 @@ export const remove = mutation({
   args: {
     itemId: v.id("items"),
     participantId: v.id("participants"),
+    secret: v.string(),
   },
   handler: async (ctx, args) => {
-    // Verify participant is host
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || !participant.isHost) {
-      throw new Error("Only the host can remove items");
-    }
-
     // Verify item exists
     const item = await ctx.db.get(args.itemId);
     if (!item) {
       throw new Error("Item not found");
     }
 
-    // Verify participant's session matches item's session
-    if (participant.sessionId !== item.sessionId) {
-      throw new Error("Participant not in this session");
-    }
+    // Host of *this* item's session - hosting another bill grants nothing here
+    await requireHost(
+      ctx,
+      item.sessionId,
+      args.participantId,
+      args.secret,
+      "remove items",
+    );
 
     // Delete all claims for this item
     const claims = await ctx.db
@@ -140,6 +146,7 @@ export const addBulk = mutation({
   args: {
     sessionId: v.id("sessions"),
     participantId: v.id("participants"),
+    secret: v.string(),
     items: v.array(
       v.object({
         name: v.string(),
@@ -150,20 +157,17 @@ export const addBulk = mutation({
   },
   handler: async (ctx, args) => {
     // Validate array length to prevent DoS
-    if (args.items.length > 500) {
-      throw new Error("Too many items (max 500)");
+    if (args.items.length > MAX_ITEMS_PER_SESSION) {
+      throw new Error(`Too many items (max ${MAX_ITEMS_PER_SESSION})`);
     }
 
-    // Verify participant is host
-    const participant = await ctx.db.get(args.participantId);
-    if (!participant || !participant.isHost) {
-      throw new Error("Only the host can replace all items");
-    }
-
-    // Verify participant's session matches the target session
-    if (participant.sessionId !== args.sessionId) {
-      throw new Error("Participant not in this session");
-    }
+    await requireHost(
+      ctx,
+      args.sessionId,
+      args.participantId,
+      args.secret,
+      "replace all items",
+    );
 
     // Validate all items before making any changes
     const validatedItems = args.items.map((item) => ({

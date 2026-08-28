@@ -15,6 +15,7 @@ sessions
   |     |-- name
   |     |-- isHost (boolean)
   |     |-- joinedAt
+  |     |-- secret (bearer credential, never leaves the server in a query)
   |
   +-- items (by sessionId)
   |     |-- name
@@ -74,19 +75,27 @@ const [draft, setDraft] = useState<DraftItem | null>(null);
 
 ### Participant Verification
 
-Session access uses `participantId` stored in localStorage, verified on load.
+Identity rests on a per-participant secret, issued once by `sessions.create` or
+`participants.join` and kept in localStorage alongside the participant ID.
+
+A participant ID on its own proves nothing. The roster, the claim list, and the
+summary all ship IDs to every client so the UI can attribute items to people, so
+an ID is a public name. Only the secret is a credential, and no query ever
+returns one.
 
 ```typescript
-// Verify participant still exists and belongs to this session
-const participant = await ctx.db.get(participantId);
-if (!participant || participant.sessionId !== session._id) {
-  throw new Error("Invalid participant");
-}
+// convex/auth.ts - every mutation that acts on someone's behalf starts here
+const participant = await requireHost(ctx, sessionId, participantId, secret);
 ```
 
-- Host identified by `isHost: true` flag
-- Host-only actions (delete bill, remove items) check this flag
-- Authorization happens in Convex mutations, not frontend
+- `requireParticipant` - the caller is who they claim to be
+- `requireMember` - and they belong to the session being acted on
+- `requireHost` - and they host _that_ session; `isHost` is never a global role
+- Secrets are compared in constant time, and every identity failure returns the
+  same message so the mutations cannot be used to probe which IDs exist
+- Participants created before secrets existed have none and can no longer be
+  authenticated as: those bills fail closed to read-only
+- Authorization happens in Convex functions, not the frontend
 
 ### Money Handling
 
@@ -116,16 +125,42 @@ const taxShares = distributeWithRemainder(totalTax, participantSubtotals);
 
 ## Security Model
 
-- **Session codes** are the access control boundary (6-char alphanumeric)
-- **Authorization** checked in mutations:
-  - Host-only: delete session, update totals via receipt
-  - All participants: claim/unclaim items, edit items
+Two layers, because they answer different questions:
+
+- **Session codes** gate _discovery_. Six characters drawn from a 32-symbol
+  alphabet by `crypto.getRandomValues` (see `convex/random.ts`) - never
+  `Math.random()`, whose state is recoverable from a few observed outputs.
+- **Participant secrets** gate _identity_. Holding a code lets you join as a new
+  person; it does not let you act as an existing one. See `convex/auth.ts`.
+
+- **Authorization** checked in every mutation:
+  - Host-only: tip/tax/merchant settings, fees, bulk item import, item removal,
+    receipt upload and OCR
+  - All participants: add and edit items, claim and unclaim their own share
+  - Cross-session: every check is scoped to the record's own session, so hosting
+    one bill confers nothing in another
 - **Input validation** with bounds:
-  - Names: 100 chars max
+  - Names: 100 chars max; control, zero-width, and bidi characters stripped, and
+    duplicates compared on an NFKC-folded key so lookalike spellings collide
   - Item names: 200 chars max
-  - Money: $100,000 max
+  - Money: $100,000 max, non-negative integers only
   - Quantity: 999 max
-- **Receipt storage** verifies session ownership before serving images
+  - Per session: 50 participants, 500 items, 50 fees
+- **Receipt storage**
+  - Upload URLs are issued to the host of a named session, never anonymously
+  - Uploads are checked against the stored file's real size and content type
+    (10 MB, image types only) before being attached to a bill
+  - The OCR action refuses any file that is not that session's own receipt, so
+    it cannot be pointed at the rest of the deployment's storage
+  - Replacing a receipt deletes the file it replaced
+
+### Known gaps
+
+- Nothing is rate limited. The code space is 32^6, and an attacker who can spray
+  `sessions.getByCode` will eventually land on a live bill. `listByCodes` is
+  capped at 10 per request to limit the amplification, but the real fix is a
+  rate limiter (`@convex-dev/rate-limiter`) or a longer code.
+- Sessions never expire and are never deleted, so a leaked code is good forever.
 
 See `.planning/phases/11-security-review/SECURITY-AUDIT.md` for the full security audit.
 
