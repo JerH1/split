@@ -14,6 +14,7 @@ export interface Context {
   session: Doc<"sessions">;
   items: Doc<"items">[];
   isHost: boolean;
+  isLocked: boolean;
   groupSubtotal: number;
   claims: Doc<"claims">[];
   currentParticipantId: Id<"participants">;
@@ -50,6 +51,7 @@ export default function Session() {
   // Derive current participant info (null if not joined)
   const currentParticipantId = currentParticipant?._id ?? null;
   const isHost = currentParticipant?.isHost ?? false;
+  const isLocked = session?.lockedAt !== undefined;
 
   // Fetch items for this session
   const items = useQuery(
@@ -271,9 +273,30 @@ export default function Session() {
             <rect x="3" y="3" width="7" height="7" />
             <rect x="14" y="3" width="7" height="7" />
             <rect x="3" y="14" width="7" height="7" />
-            <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" />
-            <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" />
-            <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
+            <rect
+              x="5"
+              y="5"
+              width="3"
+              height="3"
+              fill="currentColor"
+              stroke="none"
+            />
+            <rect
+              x="16"
+              y="5"
+              width="3"
+              height="3"
+              fill="currentColor"
+              stroke="none"
+            />
+            <rect
+              x="5"
+              y="16"
+              width="3"
+              height="3"
+              fill="currentColor"
+              stroke="none"
+            />
             <path d="M14 14h3v3h-3z" fill="currentColor" stroke="none" />
             <path d="M17 17h3v3h-3z" fill="currentColor" stroke="none" />
             <path d="M14 20h3" />
@@ -281,6 +304,32 @@ export default function Session() {
           </svg>
         </Link>
       </div>
+
+      {/* Locked banner - the split is frozen, so say so before anyone tries
+          to change it and gets a rejected mutation instead. */}
+      {isLocked && (
+        <div
+          role="status"
+          className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-b border-amber-200 text-sm text-amber-900"
+        >
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 shrink-0"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span>
+            This bill is locked
+            {isHost ? " — unlock it from Totals to make changes." : "."}
+          </span>
+        </div>
+      )}
 
       <div>
         <Outlet
@@ -291,6 +340,7 @@ export default function Session() {
             claims,
             currentParticipantId,
             isHost,
+            isLocked,
             groupSubtotal,
             fees: displayFees,
           }}
