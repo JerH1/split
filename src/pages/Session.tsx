@@ -6,44 +6,61 @@ import { Id, Doc } from "../../convex/_generated/dataModel";
 import JoinGate from "../components/JoinGate";
 import JoinToast from "../components/JoinToast";
 import TabNavigation from "../components/TabNavigation";
-import { getStoredParticipant } from "../lib/sessionStorage";
+import ThemeToggle from "../components/ThemeToggle";
+import { getStoredParticipant, StoredCredentials } from "../lib/sessionStorage";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
+
+/**
+ * A participant as the server hands them out. Secrets are stripped server-side
+ * before the roster is broadcast, so no component can read anyone else's.
+ */
+export type PublicParticipant = Omit<Doc<"participants">, "secret">;
 
 export interface Context {
   fees: Doc<"fees">[];
-  participants: Doc<"participants">[];
+  participants: PublicParticipant[];
   session: Doc<"sessions">;
   items: Doc<"items">[];
   isHost: boolean;
   groupSubtotal: number;
   claims: Doc<"claims">[];
   currentParticipantId: Id<"participants">;
+  /** The current user's own secret, required by every mutation they make. */
+  secret: string;
 }
 
 export default function Session() {
   const { code } = useParams<{ code: string }>();
 
-  // State to track participant ID after just joining (before localStorage is read again)
-  const [justJoinedParticipantId, setJustJoinedParticipantId] =
-    useState<Id<"participants"> | null>(null);
+  // Child routes override this with their own tab name once loaded.
+  useDocumentTitle(code ? `Bill ${code}` : undefined);
+
+  // State to track credentials after just joining (before localStorage is read again)
+  const [justJoinedCredentials, setJustJoinedCredentials] =
+    useState<StoredCredentials | null>(null);
 
   // Fetch session by code
   const session = useQuery(api.sessions.getByCode, code ? { code } : "skip");
 
-  // Get stored participant ID from sessionStorage
-  const storedParticipantId = useMemo(() => {
+  // Get stored credentials from sessionStorage
+  const storedCredentials = useMemo(() => {
     if (!code) return null;
     return getStoredParticipant(code);
   }, [code]);
 
-  // Use justJoinedParticipantId if set, otherwise use stored
-  const effectiveStoredParticipantId =
-    justJoinedParticipantId ?? storedParticipantId;
+  // Use the just-joined credentials if set, otherwise the stored ones
+  const credentials = justJoinedCredentials ?? storedCredentials;
 
-  // Fetch current participant data
+  // Resolve the current participant from their credentials. The server returns
+  // null unless the secret matches, so this doubles as the check that the
+  // stored credential is still good.
   const currentParticipant = useQuery(
-    api.participants.getById,
-    effectiveStoredParticipantId
-      ? { participantId: effectiveStoredParticipantId as Id<"participants"> }
+    api.participants.me,
+    credentials
+      ? {
+          participantId: credentials.participantId as Id<"participants">,
+          secret: credentials.secret,
+        }
       : "skip",
   );
 
@@ -140,8 +157,8 @@ export default function Session() {
   // Loading state
   if (session === undefined) {
     return (
-      <div className="p-4">
-        <p className="text-gray-500">Loading bill...</p>
+      <div role="status" className="p-4">
+        <p className="text-ink-2">Loading bill...</p>
       </div>
     );
   }
@@ -150,27 +167,30 @@ export default function Session() {
   if (session === null) {
     return (
       <div className="p-4 text-center">
-        <h1 className="text-xl font-semibold text-gray-900 mb-2">
+        <h1 className="font-display text-2xl font-extrabold text-ink mb-2">
           Bill Not Found
         </h1>
-        <p className="text-gray-600 mb-4">
+        <p className="text-ink-2 mb-4">
           Code "{code}" doesn't match any active bill. It might have expired or
           there's a typo.
         </p>
-        <Link to="/" className="text-blue-500 hover:text-blue-600 font-medium">
-          ← Start a new bill
+        <Link
+          to="/"
+          className="inline-flex min-h-11 items-center rounded-tile font-semibold text-ink underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        >
+          <span aria-hidden="true">←</span>&nbsp;Start a new bill
         </Link>
       </div>
     );
   }
 
   // Determine if user needs to join:
-  // - No stored participant ID means they've never joined
-  // - Stored ID exists but currentParticipant is null means it was invalid (stale/wrong session)
+  // - No stored credentials means they've never joined (or hold a pre-secret entry)
+  // - Credentials exist but currentParticipant is null means they were rejected
   // - currentParticipant undefined means still loading - don't show gate yet
   const needsToJoin =
-    effectiveStoredParticipantId === null ||
-    (effectiveStoredParticipantId !== null && currentParticipant === null);
+    credentials === null ||
+    (credentials !== null && currentParticipant === null);
 
   // Show join gate for non-participants
   if (needsToJoin) {
@@ -181,8 +201,8 @@ export default function Session() {
     return (
       <JoinGate
         session={{ _id: session._id, code: session.code, hostName }}
-        onJoined={(participantId) => {
-          setJustJoinedParticipantId(participantId);
+        onJoined={(joined) => {
+          setJustJoinedCredentials(joined);
         }}
       />
     );
@@ -217,46 +237,63 @@ export default function Session() {
       ))}
 
       {/* Session Header */}
-      <div className="sticky top-0 z-10 w-full bg-blue-50 border-b border-blue-100 flex items-center">
+      <div className="sticky top-0 z-10 flex w-full items-center gap-1 border-b-2 border-brand bg-surface px-2">
         {/* Back button */}
         <Link
           to="/"
-          className="flex items-center gap-1 px-4 py-4 text-blue-600 hover:text-blue-800 active:text-blue-900 shrink-0"
+          className="flex min-h-11 shrink-0 items-center gap-1 rounded-tile px-2 py-3 text-ink-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
           aria-label="Back to home"
         >
           <svg
+            aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
-            strokeWidth={2.5}
+            strokeWidth={2.8}
             strokeLinecap="round"
             strokeLinejoin="round"
           >
             <path d="M15 18l-6-6 6-6" />
           </svg>
-          <span className="text-sm font-medium">Bills</span>
+          <span className="text-sm font-bold">Bills</span>
         </Link>
 
         {/* Tappable Session Code */}
         <button
+          type="button"
           onClick={handleCopyCode}
-          className="flex-1 py-4 text-center active:bg-blue-100 transition-colors"
+          aria-label={`Bill code ${session.code.split("").join(" ")}. Copy share link.`}
+          className="flex flex-1 flex-col items-center rounded-tile py-2 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus active:translate-y-px"
         >
-          <span className="text-2xl font-mono font-bold tracking-widest text-blue-600">
+          <span
+            aria-hidden="true"
+            className="tabular font-display text-2xl font-extrabold leading-[1.3] tracking-[0.24em] indent-[0.24em] text-brand"
+          >
             {session.code}
           </span>
-          <p className="text-xs text-blue-500 mt-1">
-            {copied ? "Copied!" : "tap to copy URL"}
-          </p>
+          <span
+            aria-hidden="true"
+            className="text-[11px] font-semibold text-ink-3"
+          >
+            {copied ? "Copied!" : "tap to copy link"}
+          </span>
         </button>
 
-        {/* Spacer to balance back button width */}
-        <div className="w-[72px] shrink-0" />
+        {/* Theme toggle, in the space that balances the back button */}
+        <ThemeToggle className="shrink-0 border-0 bg-transparent shadow-none" />
       </div>
 
-      <div>
+      {/* Copy confirmation. A persistent live region, so the change is
+          announced without disturbing the button's own label. */}
+      <p aria-live="polite" className="sr-only">
+        {copied ? "Share link copied to clipboard" : ""}
+      </p>
+
+      {/* Bottom padding clears the fixed tab bar on every tab, including at
+          high zoom where the bar grows. */}
+      <div className="pb-20">
         <Outlet
           context={{
             participants,
@@ -267,6 +304,7 @@ export default function Session() {
             isHost,
             groupSubtotal,
             fees: displayFees,
+            secret: credentials?.secret ?? "",
           }}
         />
       </div>

@@ -5,16 +5,23 @@ import { Id } from "../../convex/_generated/dataModel";
 
 interface ReceiptCaptureProps {
   sessionId: Id<"sessions">;
+  // Uploading is host-only and both steps are authorized server-side, so the
+  // host's credentials travel with each call.
+  participantId: Id<"participants">;
+  secret: string;
   onUpload: (storageId: Id<"_storage">) => void;
   disabled?: boolean;
 }
 
 export default function ReceiptCapture({
   sessionId,
+  participantId,
+  secret,
   onUpload,
   disabled = false,
 }: ReceiptCaptureProps) {
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
@@ -23,9 +30,14 @@ export default function ReceiptCapture({
 
   async function handleFileSelect(file: File) {
     setIsUploading(true);
+    setUploadError(null);
     try {
       // Step 1: Get upload URL from Convex
-      const uploadUrl = await generateUploadUrl();
+      const uploadUrl = await generateUploadUrl({
+        sessionId,
+        participantId,
+        secret,
+      });
 
       // Step 2: POST file to the upload URL
       const result = await fetch(uploadUrl, {
@@ -41,12 +53,22 @@ export default function ReceiptCapture({
       const { storageId } = await result.json();
 
       // Step 3: Save the storage ID to the session
-      await saveReceiptImage({ sessionId, storageId });
+      await saveReceiptImage({
+        sessionId,
+        participantId,
+        secret,
+        storageId,
+      });
 
       // Notify parent component
       onUpload(storageId);
     } catch (error) {
       console.error("Receipt upload failed:", error);
+      // Surface the failure - previously this only reached the console, so the
+      // button appeared to do nothing at all.
+      setUploadError(
+        "We couldn't upload that image. Check your connection and try again.",
+      );
     } finally {
       setIsUploading(false);
       // Reset file inputs after upload (success or failure)
@@ -90,11 +112,13 @@ export default function ReceiptCapture({
       {/* Two buttons for explicit camera vs gallery choice - works on all platforms */}
       <div className="flex gap-2">
         <button
+          type="button"
           onClick={() => cameraInputRef.current?.click()}
           disabled={isDisabled}
-          className="flex-1 bg-blue-500 text-white font-medium py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+          className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-card border-card border-line bg-accent px-4 py-3 font-bold text-sm whitespace-nowrap text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg
+            aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5"
             viewBox="0 0 20 20"
@@ -109,11 +133,13 @@ export default function ReceiptCapture({
           {isUploading ? "Uploading..." : "Take Photo"}
         </button>
         <button
+          type="button"
           onClick={() => galleryInputRef.current?.click()}
           disabled={isDisabled}
-          className="flex-1 bg-gray-100 text-gray-700 font-medium py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-200 transition-colors flex items-center justify-center gap-2"
+          className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-card border-card border-line bg-surface px-4 py-3 font-bold text-sm whitespace-nowrap text-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg
+            aria-hidden="true"
             xmlns="http://www.w3.org/2000/svg"
             className="h-5 w-5"
             viewBox="0 0 20 20"
@@ -128,6 +154,12 @@ export default function ReceiptCapture({
           {isUploading ? "Uploading..." : "Choose Image"}
         </button>
       </div>
+
+      {uploadError && (
+        <p role="alert" className="text-sm font-semibold text-alert-ink">
+          {uploadError}
+        </p>
+      )}
     </div>
   );
 }

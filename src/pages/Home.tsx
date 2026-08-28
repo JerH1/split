@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useNavigate, Link } from "react-router";
 import { api } from "../../convex/_generated/api";
@@ -7,15 +7,23 @@ import {
   getStoredParticipant,
   storeParticipant,
   clearParticipant,
+  StoredCredentials,
 } from "../lib/sessionStorage";
 import {
   addBillToHistory,
   getBillHistory,
+  updateMerchantNameInBillHistory,
   BillHistoryEntry,
 } from "../lib/billHistory";
 import { getLastUsedName, setLastUsedName } from "../lib/userPreferences";
+import { useDocumentTitle } from "../lib/useDocumentTitle";
+import Mark, { Wordmark } from "../components/Mark";
+import ThemeToggle from "../components/ThemeToggle";
+import { personColorVar } from "../lib/participantColors";
 
 export default function Home() {
+  useDocumentTitle();
+
   // Unified name state (used for both create and join)
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -23,9 +31,8 @@ export default function Home() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [isCheckingStored, setIsCheckingStored] = useState(false);
-  const [storedParticipantId, setStoredParticipantId] = useState<string | null>(
-    null,
-  );
+  const [storedCredentials, setStoredCredentials] =
+    useState<StoredCredentials | null>(null);
 
   const navigate = useNavigate();
   const createSession = useMutation(api.sessions.create);
@@ -45,28 +52,32 @@ export default function Home() {
     }
   }, []);
 
-  // Check localStorage for stored participant when session is found
+  // Check localStorage for stored credentials when session is found
   useEffect(() => {
     if (joinSession && code.length >= 6) {
       const stored = getStoredParticipant(code);
       if (stored) {
-        setStoredParticipantId(stored);
+        setStoredCredentials(stored);
         setIsCheckingStored(true);
       } else {
-        setStoredParticipantId(null);
+        setStoredCredentials(null);
         setIsCheckingStored(false);
       }
     } else {
-      setStoredParticipantId(null);
+      setStoredCredentials(null);
       setIsCheckingStored(false);
     }
   }, [joinSession, code]);
 
-  // Query stored participant to verify it still exists
+  // Verify the stored credentials still authenticate. The server returns null
+  // for anything stale or forged, which falls through to the join flow below.
   const storedParticipant = useQuery(
-    api.participants.getById,
-    storedParticipantId
-      ? { participantId: storedParticipantId as Id<"participants"> }
+    api.participants.me,
+    storedCredentials
+      ? {
+          participantId: storedCredentials.participantId as Id<"participants">,
+          secret: storedCredentials.secret,
+        }
       : "skip",
   );
 
@@ -79,12 +90,12 @@ export default function Home() {
       joinSession &&
       storedParticipant.sessionId === joinSession._id
     ) {
-      // Participant exists and belongs to this session - auto-redirect
+      // Credentials still valid for this session - auto-redirect
       navigate(`/bill/${code}/items`);
     } else {
-      // Participant doesn't exist or belongs to different session - clear storage
+      // Credentials rejected, or they belong to a different session
       clearParticipant(code);
-      setStoredParticipantId(null);
+      setStoredCredentials(null);
       setIsCheckingStored(false);
     }
   }, [storedParticipant, isCheckingStored, joinSession, code, navigate]);
@@ -93,6 +104,45 @@ export default function Home() {
   useEffect(() => {
     setHistory(getBillHistory());
   }, []);
+
+  // The merchant name is only written to local history on the device that
+  // uploaded the receipt, so read it from the sessions themselves instead.
+  const historyCodes = useMemo(
+    () => history.map((bill) => bill.code),
+    [history],
+  );
+  const historySessions = useQuery(
+    api.sessions.listByCodes,
+    historyCodes.length > 0 ? { codes: historyCodes } : "skip",
+  );
+
+  const merchantByCode = useMemo(() => {
+    const byCode = new Map<string, string>();
+    for (const session of historySessions ?? []) {
+      if (session.merchant) {
+        byCode.set(session.code, session.merchant);
+      }
+    }
+    return byCode;
+  }, [historySessions]);
+
+  // Cache what we learned so the list still reads correctly offline
+  useEffect(() => {
+    if (!historySessions) return;
+
+    let updated = false;
+    for (const session of historySessions) {
+      if (!session.merchant) continue;
+      const entry = getBillHistory().find((bill) => bill.code === session.code);
+      if (entry && entry.merchant !== session.merchant) {
+        updateMerchantNameInBillHistory(session.code, session.merchant);
+        updated = true;
+      }
+    }
+    if (updated) {
+      setHistory(getBillHistory());
+    }
+  }, [historySessions]);
 
   // Determine session state
   const isValidCode = code.length >= 6;
@@ -106,7 +156,8 @@ export default function Home() {
     name.trim().length > 0 && !isSubmitting && !isCheckingStored;
 
   // Handle form submission
-  async function handleSubmit() {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     if (!name.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
@@ -115,12 +166,12 @@ export default function Home() {
     try {
       if (isJoinMode && joinSession) {
         // Join existing bill
-        const participantId = await joinSessionMutation({
+        const { participantId, secret } = await joinSessionMutation({
           sessionId: joinSession._id,
           name: name.trim(),
         });
-        // Store participant ID for session restoration on future visits
-        storeParticipant(joinSession.code, participantId);
+        // Store credentials for session restoration on future visits
+        storeParticipant(joinSession.code, { participantId, secret });
         // Save name for future pre-fill
         setLastUsedName(name.trim());
         // Add to bill history for quick access
@@ -132,11 +183,18 @@ export default function Home() {
         navigate(`/bill/${joinSession.code}/items`);
       } else {
         // Create new bill
-        const { code: newCode, hostParticipantId } = await createSession({
+        const {
+          code: newCode,
+          hostParticipantId,
+          hostSecret,
+        } = await createSession({
           hostName: name.trim(),
         });
-        // Store host's participant ID for session persistence (enables claiming items)
-        storeParticipant(newCode, hostParticipantId);
+        // Store host credentials for session persistence (enables claiming items)
+        storeParticipant(newCode, {
+          participantId: hostParticipantId,
+          secret: hostSecret,
+        });
         // Save name for future pre-fill
         setLastUsedName(name.trim());
         // Add to bill history for quick access
@@ -161,12 +219,6 @@ export default function Home() {
     }
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" && canSubmit) {
-      handleSubmit();
-    }
-  };
-
   // Button text and style
   const buttonText = isSubmitting
     ? isJoinMode
@@ -182,23 +234,26 @@ export default function Home() {
     !canSubmit || (isValidCode && !sessionFound && !sessionNotFound);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
-      <div className="w-full max-w-md text-center space-y-8">
+    <div className="relative min-h-screen px-5 pt-14 pb-10">
+      <ThemeToggle className="absolute top-5 right-5" />
+
+      <div className="mx-auto w-full max-w-md space-y-7">
         {/* App branding */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Split</h1>
-          <p className="text-lg text-gray-600">
-            Split bills with friends, instantly.
-          </p>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Mark size={62} />
+          <h1 className="text-[42px] leading-[1.3]">
+            <Wordmark />
+          </h1>
+          <p className="text-ink-2">Everyone grabs what they ate.</p>
         </div>
 
         {/* Unified form */}
-        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {/* Name input */}
           <div className="space-y-2">
             <label
               htmlFor="name"
-              className="block text-sm font-medium text-gray-700 text-left"
+              className="block text-sm font-semibold text-ink-2"
             >
               Your name
             </label>
@@ -207,11 +262,10 @@ export default function Home() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              onKeyDown={handleKeyDown}
               placeholder="Enter your name"
               autoComplete="name"
               autoCapitalize="words"
-              className="w-full px-4 py-3 text-lg border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full min-h-14 rounded-tile border-card border-line bg-surface px-4 text-lg font-semibold text-ink shadow-hard placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page"
             />
           </div>
 
@@ -219,10 +273,10 @@ export default function Home() {
           <div className="space-y-2">
             <label
               htmlFor="code"
-              className="block text-sm font-medium text-gray-700 text-left"
+              className="block text-sm font-semibold text-ink-2"
             >
-              Bill code{" "}
-              <span className="text-gray-400 font-normal">(optional)</span>
+              Got a code?{" "}
+              <span className="font-normal text-ink-3">optional</span>
             </label>
             <input
               id="code"
@@ -235,17 +289,21 @@ export default function Home() {
               placeholder="ABC123"
               maxLength={6}
               autoComplete="off"
-              className="w-full px-4 py-3 text-lg font-mono tracking-widest text-center border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent uppercase"
+              className={`tabular w-full min-h-14 rounded-tile bg-surface px-4 text-center text-xl font-bold uppercase tracking-[0.4em] indent-[0.4em] text-ink placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page ${
+                sessionFound
+                  ? "border-card border-line shadow-hard"
+                  : "border-card border-dashed border-ink-4"
+              }`}
             />
             {/* Code status message */}
             {isValidCode && (
               <p
-                className={`text-sm ${
+                className={`text-sm font-semibold ${
                   sessionFound
-                    ? "text-green-600"
+                    ? "text-ink"
                     : isCheckingSession || isCheckingStored
-                      ? "text-gray-500"
-                      : "text-red-600"
+                      ? "text-ink-3"
+                      : "text-alert"
                 }`}
               >
                 {isCheckingSession || isCheckingStored
@@ -259,53 +317,83 @@ export default function Home() {
 
           {/* Error display */}
           {joinError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-red-600 text-sm">{joinError}</p>
+            <div
+              role="alert"
+              className="rounded-tile border-card border-alert bg-alert-tint p-3"
+            >
+              <p className="text-sm font-semibold text-alert-ink">
+                {joinError}
+              </p>
             </div>
           )}
 
           {/* Smart button */}
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={buttonDisabled}
-            className={`w-full py-4 text-lg font-semibold text-white rounded-lg transition-colors ${
-              isJoinMode
-                ? "bg-blue-500 hover:bg-blue-600 active:bg-blue-700"
-                : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-            } disabled:bg-gray-300 disabled:cursor-not-allowed`}
+            className="flex w-full min-h-15 items-center justify-center gap-2 rounded-card border-card border-line bg-accent font-display text-xl font-extrabold text-accent-ink shadow-hard-lg transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:border-ink-4 disabled:bg-surface disabled:text-ink-4 disabled:shadow-none disabled:active:translate-x-0 disabled:active:translate-y-0"
           >
+            {!isSubmitting && !isCheckingSession && (
+              <svg
+                aria-hidden="true"
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.8}
+                strokeLinecap="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            )}
             {buttonText}
           </button>
-        </div>
+        </form>
 
         {/* Bill history section */}
         {history.length > 0 && (
-          <div className="mt-8 space-y-3">
-            <h2 className="text-sm font-medium text-gray-500 uppercase tracking-wide">
-              Recent Bills
+          <div className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-ink-3">
+              Recent
             </h2>
-            <div className="space-y-2">
-              {history.map((bill) => (
+            <div className="space-y-3">
+              {history.map((bill, index) => (
                 <Link
                   key={bill.code}
                   to={`/bill/${bill.code}/items`}
-                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+                  className="flex items-center gap-3 rounded-card border-card border-line bg-surface p-3 shadow-hard transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
-                  <div className="flex justify-between items-center">
-                    <div className="flex flex-col items-start">
-                      <div className="font-medium text-gray-900">
-                        {bill.merchant || `Bill ${bill.code}`}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        {new Date(bill.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                    {bill.total && (
-                      <div className="text-lg font-semibold text-gray-900">
-                        ${(bill.total / 100).toFixed(2)}
-                      </div>
-                    )}
-                  </div>
+                  <span
+                    aria-hidden="true"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-card border-line"
+                    style={{ background: personColorVar(index) }}
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#221C12"
+                      strokeWidth={2.2}
+                      strokeLinecap="round"
+                    >
+                      <path d="M5 12h14M7 8h10M9 16h6" />
+                    </svg>
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col items-start">
+                    <span className="truncate font-display text-lg font-bold text-ink">
+                      {merchantByCode.get(bill.code) ||
+                        bill.merchant ||
+                        `Bill ${bill.code}`}
+                    </span>
+                    <span className="text-xs font-medium text-ink-3">
+                      {new Date(bill.createdAt).toLocaleDateString()}
+                    </span>
+                  </span>
+                  {bill.total !== undefined && (
+                    <span className="tabular font-display text-xl font-extrabold text-ink">
+                      ${(bill.total / 100).toFixed(2)}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

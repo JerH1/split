@@ -1,6 +1,204 @@
 @import "tailwindcss";
 
+/* ---------------------------------------------------------------------------
+   Design tokens
+
+   Two themes ship together: Snack Pack (light) and Night Snack (dark). Every
+   themed value is a raw custom property so it can be swapped at runtime, then
+   mapped into Tailwind's utility namespace by `@theme inline` below — that is
+   what makes `bg-surface` / `text-ink` follow the theme instead of baking in a
+   colour at build time.
+
+   The resolved theme is always written to <html data-theme>, by the inline
+   script in index.html before first paint and by useTheme() thereafter. There
+   is deliberately no `prefers-color-scheme` block: one source of truth beats
+   two that can drift.
+
+   The rule both themes share: an outline means you can press it, colour means
+   whose it is. The two never do each other's job.
+--------------------------------------------------------------------------- */
+
+:root {
+  color-scheme: light;
+
+  --page: #fff6e9;
+  --surface: #ffffff;
+  --surface-sunk: #fff6e9;
+
+  --ink: #221c12;
+  --ink-2: #6b6152;
+  --ink-3: #8c7f68;
+  --ink-4: #b9ae99;
+
+  /* The outline that says "pressable". In light it is the ink itself. */
+  --line: #221c12;
+  /* Dividers inside a surface, which are never pressable. */
+  --line-soft: #e4dac6;
+  --shadow: #221c12;
+  --focus: #221c12;
+
+  --accent: #ffc24b;
+  --accent-ink: #221c12;
+  --accent-shadow: #221c12;
+  /* The brand colour, for the wordmark and the mark's small drawing. Kept
+     apart from --accent because mustard on cream is unreadable at text size. */
+  --brand: #e0356b;
+
+  --alert: #e0356b;
+  --alert-ink: #a32250;
+  --alert-tint: #ffe7ee;
+  /* Text sitting on top of a solid --alert fill. */
+  --alert-on: #ffffff;
+
+  /* Anything the current user has claimed. */
+  --mine-tint: #fff0f4;
+
+  /* The one inverted panel: the bill's grand total. It cannot just be
+     ink-on-page, or it flips to a white slab on the dark theme. */
+  --total-bg: #221c12;
+  --total-fg: #fff6e9;
+  --total-muted: #a2977f;
+  --total-line: #221c12;
+
+  /* Initials and glyphs sitting on a person's colour. Both palettes are bright
+     enough that one dark ink works for all eight. */
+  --on-person: #221c12;
+
+  --person-1: #ff5c8a;
+  --person-2: #5b76ff;
+  --person-3: #3fcf9b;
+  --person-4: #ff8a47;
+
+  --bw: 2.5px;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --page: #08070c;
+  --surface: #14121c;
+  --surface-sunk: #08070c;
+
+  --ink: #ffffff;
+  --ink-2: #9c95b4;
+  --ink-3: #7c7593;
+  --ink-4: #4a4460;
+
+  /* On a dark ground the outline can't be the ink — it would disappear into
+     the text. It becomes a lifted surface edge instead. */
+  --line: #2e2a3d;
+  --line-soft: #221e2e;
+  /* A hard shadow in true black is invisible on #08070c, so the offset is a
+     near-black violet that still reads as a shadow. */
+  --shadow: #241f33;
+  --focus: #c6ff3d;
+
+  --accent: #c6ff3d;
+  --accent-ink: #08070c;
+  --accent-shadow: #5c7a1b;
+  --brand: #c6ff3d;
+
+  --alert: #ff8a3d;
+  --alert-ink: #ffc79b;
+  --alert-tint: #1e1410;
+  --alert-on: #08070c;
+
+  --mine-tint: #0e1a1e;
+
+  --total-bg: #14121c;
+  --total-fg: #ffffff;
+  --total-muted: #7c7593;
+  --total-line: #4c6b14;
+
+  --on-person: #08070c;
+
+  --person-1: #3de8ff;
+  --person-2: #ff4fd8;
+  --person-3: #a96cff;
+  --person-4: #ff8a3d;
+
+  --bw: 2px;
+}
+
+@theme inline {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-focus: var(--focus);
+
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-brand: var(--brand);
+
+  --color-alert: var(--alert);
+  --color-alert-ink: var(--alert-ink);
+  --color-alert-tint: var(--alert-tint);
+  --color-alert-on: var(--alert-on);
+
+  --color-mine-tint: var(--mine-tint);
+
+  --color-total-bg: var(--total-bg);
+  --color-total-fg: var(--total-fg);
+  --color-total-muted: var(--total-muted);
+  --color-total-line: var(--total-line);
+
+  --color-on-person: var(--on-person);
+  --color-person-1: var(--person-1);
+  --color-person-2: var(--person-2);
+  --color-person-3: var(--person-3);
+  --color-person-4: var(--person-4);
+
+  --shadow-hard-sm: 2px 2px 0 var(--shadow);
+  --shadow-hard: 4px 4px 0 var(--shadow);
+  --shadow-hard-lg: 5px 5px 0 var(--shadow);
+  --shadow-hard-accent: 4px 4px 0 var(--accent-shadow);
+}
+
+@theme {
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Baloo 2", "Figtree", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 18px;
+  --radius-tile: 16px;
+}
+
 /* Safe area utilities for iOS notch handling */
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* The pressable outline. 2.5px on paper, 2px on the dark ground — a hairline
+   heavier than that starts to look like a border rather than a drawn edge. */
+@utility border-card {
+  border-width: var(--bw);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--page);
+    color: var(--ink);
+    font-family: var(--font-sans);
+  }
+
+  /* Money and codes are compared down a column, so they never shift. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--accent-ink);
+  }
 }

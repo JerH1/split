@@ -89,6 +89,52 @@ test.describe("Join Flow", () => {
     }
   });
 
+  test("E2E-07b: guest can claim items with the keyboard alone", async ({
+    browser,
+  }) => {
+    const hostContext = await browser.newContext();
+    const guestContext = await browser.newContext();
+
+    try {
+      // 1. Host creates bill and adds an item
+      const { page: hostPage, code } = await createBillAsHost(hostContext);
+
+      await hostPage.click('button:has-text("+ Add Item")');
+      await hostPage.fill('input[placeholder="Item name"]', "Pizza");
+      await hostPage.fill('input[inputmode="decimal"]', "15.00");
+      await hostPage.click('button:has-text("Save")');
+      await expect(hostPage.locator("text=Pizza")).toBeVisible();
+
+      // 2. Guest joins the bill
+      const guestPage = await guestContext.newPage();
+      await guestPage.goto(`/bill/${code}`);
+      await guestPage.fill("input#join-name", "Bob");
+      await guestPage.click('button:has-text("Join Bill")');
+
+      // 3. The item row exposes itself as an unpressed toggle button
+      const pizzaItem = guestPage
+        .locator('[role="button"]')
+        .filter({ hasText: "Pizza" });
+      await expect(pizzaItem).toBeVisible();
+      await expect(pizzaItem).toHaveAttribute("aria-pressed", "false");
+
+      // 4. Claim it without ever using the mouse
+      await pizzaItem.focus();
+      await guestPage.keyboard.press("Enter");
+
+      // 5. Claim registers and the toggle state is exposed
+      await expect(pizzaItem.locator("text=Bob")).toBeVisible();
+      await expect(pizzaItem).toHaveAttribute("aria-pressed", "true");
+
+      // 6. Space unclaims it again
+      await guestPage.keyboard.press(" ");
+      await expect(pizzaItem).toHaveAttribute("aria-pressed", "false");
+    } finally {
+      await hostContext.close();
+      await guestContext.close();
+    }
+  });
+
   test("E2E-07: guest can claim items", async ({ browser }) => {
     const hostContext = await browser.newContext();
     const guestContext = await browser.newContext();
@@ -112,7 +158,7 @@ test.describe("Join Flow", () => {
 
       // 3. Wait for items to load - verify "Tap to claim" hint is visible
       const pizzaItem = guestPage
-        .locator(".rounded-lg")
+        .locator('[data-testid="item-row"]')
         .filter({ hasText: "Pizza" });
       await expect(pizzaItem).toBeVisible();
       await expect(pizzaItem.locator("text=Tap to claim")).toBeVisible();
@@ -152,7 +198,7 @@ test.describe("Join Flow", () => {
 
       // Wait for the item to load - verify "Tap to claim" hint is visible
       const pastaItem = guestPage
-        .locator(".rounded-lg")
+        .locator('[data-testid="item-row"]')
         .filter({ hasText: "Pasta" })
         .filter({ hasText: "Tap to claim" });
       await expect(pastaItem).toBeVisible();
@@ -163,7 +209,7 @@ test.describe("Join Flow", () => {
       // Wait for claim to be processed (Carol's name appears in pill)
       await expect(
         guestPage
-          .locator(".rounded-lg")
+          .locator('[data-testid="item-row"]')
           .filter({ hasText: "Pasta" })
           .locator("text=Carol"),
       ).toBeVisible();
@@ -174,7 +220,7 @@ test.describe("Join Flow", () => {
       // 4. Verify Carol's participant card shows with correct total
       // Carol's card should have $20.00 (font-bold for total)
       const carolCard = guestPage
-        .locator(".rounded-lg.border-2")
+        .locator('[data-testid="participant-card"]')
         .filter({ hasText: "Carol" });
       await expect(carolCard).toBeVisible();
 
