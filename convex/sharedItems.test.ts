@@ -42,14 +42,19 @@ async function setup(t: ReturnType<typeof convexTest>, quantity = 1) {
   });
 }
 
-/** Claims on one item, read straight from the DB. */
-async function claimsOn(t: ReturnType<typeof convexTest>, itemId: Id<"items">) {
-  return await t.run(async (ctx) =>
-    ctx.db
-      .query("claims")
-      .withIndex("by_item", (q) => q.eq("itemId", itemId))
-      .collect(),
-  );
+/**
+ * Claims on one item, via the public query the app itself uses.
+ *
+ * Going through the API rather than ctx.db keeps this readable under the
+ * schema-less typing the Convex CLI applies to files in convex/.
+ */
+async function claimsOn(
+  t: ReturnType<typeof convexTest>,
+  sessionId: Id<"sessions">,
+  itemId: Id<"items">,
+) {
+  const claims = await t.query(api.claims.listBySession, { sessionId });
+  return claims.filter((claim) => claim.itemId === itemId);
 }
 
 describe("shared items", () => {
@@ -65,7 +70,7 @@ describe("shared items", () => {
         secret: "host-secret",
       });
 
-      expect(await claimsOn(t, itemId)).toHaveLength(3);
+      expect(await claimsOn(t, sessionId, itemId)).toHaveLength(3);
     });
 
     it("does not double-claim for someone who already claimed it", async () => {
@@ -85,7 +90,7 @@ describe("shared items", () => {
         secret: "host-secret",
       });
 
-      const claims = await claimsOn(t, itemId);
+      const claims = await claimsOn(t, sessionId, itemId);
       expect(claims).toHaveLength(3);
       expect(new Set(claims.map((c) => c.participantId)).size).toBe(3);
     });
@@ -167,7 +172,7 @@ describe("shared items", () => {
         secret: "host-secret",
       });
 
-      expect(await claimsOn(t, itemId)).toHaveLength(0);
+      expect(await claimsOn(t, sessionId, itemId)).toHaveLength(0);
     });
 
     it("refuses a caller who is not in the bill", async () => {

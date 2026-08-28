@@ -139,8 +139,11 @@ export default function Summary() {
                 aria-controls={`breakdown-${participant.participantId}`}
                 className="w-full p-4 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-2">
+                  {/* A person can carry up to four badges (You, Host, Done,
+                      Settled). On a narrow phone that overruns the amount, so
+                      the badges wrap and the amount keeps its width. */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
                     <span className="font-semibold text-gray-800">
                       {participant.name}
                     </span>
@@ -168,7 +171,7 @@ export default function Summary() {
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     <span className="text-xl font-bold text-gray-900">
                       ${(participant.total / 100).toFixed(2)}
                     </span>
