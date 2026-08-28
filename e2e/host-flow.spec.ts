@@ -60,7 +60,7 @@ test.describe("Host Flow", () => {
     await expect(page.locator("text=Fries")).toBeVisible();
 
     // Navigate to Tax & Tip tab
-    await page.click('button:has-text("Tax & Tip")');
+    await page.getByRole("link", { name: "Tax & Tip" }).click();
 
     // Wait for tab content to load - look for the Tip section header
     await expect(page.locator("h3:has-text('Tip')")).toBeVisible();
@@ -98,7 +98,7 @@ test.describe("Host Flow", () => {
     await page.locator("text=Salad").click();
 
     // Navigate to Summary tab
-    await page.click('button:has-text("Totals")');
+    await page.getByRole("link", { name: "Totals" }).click();
 
     // Verify participant card shows with name and total
     await expect(page.locator("text=Alice")).toBeVisible();
