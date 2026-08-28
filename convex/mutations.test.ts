@@ -55,13 +55,10 @@ describe("participant join", () => {
     });
 
     // Action: Join as non-host
-    const { participantId, secret: participantIdSecret } = await t.mutation(
-      api.participants.join,
-      {
-        sessionId,
-        name: "Guest",
-      },
-    );
+    const { participantId } = await t.mutation(api.participants.join, {
+      sessionId,
+      name: "Guest",
+    });
 
     // Verify: Participant has correct properties
     const participant = await t.run(async (ctx) => ctx.db.get(participantId));
@@ -81,13 +78,10 @@ describe("participant join", () => {
     });
 
     // Action: Join with whitespace-padded name
-    const { participantId, secret: participantIdSecret } = await t.mutation(
-      api.participants.join,
-      {
-        sessionId,
-        name: "  Charlie  ",
-      },
-    );
+    const { participantId } = await t.mutation(api.participants.join, {
+      sessionId,
+      name: "  Charlie  ",
+    });
 
     // Verify: Name is trimmed
     const participant = await t.run(async (ctx) => ctx.db.get(participantId));
@@ -194,8 +188,9 @@ describe("duplicate name handling", () => {
   it("allows same name in different sessions (BTEST-18)", async () => {
     const t = convexTest(schema);
 
-    // Setup: Create two sessions
-    const session1 = await t.mutation(api.sessions.create, {
+    // Setup: Create two sessions. The first exists only so that "Alice" is
+    // already taken somewhere else; nothing here reads it back.
+    await t.mutation(api.sessions.create, {
       hostName: "Alice",
     });
     const session2 = await t.mutation(api.sessions.create, {

@@ -102,7 +102,7 @@ export default function Session() {
     }
     // No fees
     return [];
-  }, [fees, session?.tax]);
+  }, [fees]);
 
   // Copy code state
   const [copied, setCopied] = useState(false);

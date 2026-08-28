@@ -215,34 +215,32 @@ describe("claims authorization", () => {
       const t = convexTest(schema);
 
       // Setup: Create session with participant, item, and claim
-      const { sessionId, participantId, itemId, claimId } = await t.run(
-        async (ctx) => {
-          const sessionId = await ctx.db.insert("sessions", {
-            code: "ABC123",
-            hostName: "Host",
-            createdAt: Date.now(),
-          });
-          const participantId = await ctx.db.insert("participants", {
-            sessionId,
-            name: "Guest",
-            isHost: false,
-            joinedAt: Date.now(),
-            secret: "participantId-secret",
-          });
-          const itemId = await ctx.db.insert("items", {
-            sessionId,
-            name: "Burger",
-            price: 1500,
-            quantity: 1,
-          });
-          const claimId = await ctx.db.insert("claims", {
-            sessionId,
-            itemId,
-            participantId,
-          });
-          return { sessionId, participantId, itemId, claimId };
-        },
-      );
+      const { participantId, itemId, claimId } = await t.run(async (ctx) => {
+        const sessionId = await ctx.db.insert("sessions", {
+          code: "ABC123",
+          hostName: "Host",
+          createdAt: Date.now(),
+        });
+        const participantId = await ctx.db.insert("participants", {
+          sessionId,
+          name: "Guest",
+          isHost: false,
+          joinedAt: Date.now(),
+          secret: "participantId-secret",
+        });
+        const itemId = await ctx.db.insert("items", {
+          sessionId,
+          name: "Burger",
+          price: 1500,
+          quantity: 1,
+        });
+        const claimId = await ctx.db.insert("claims", {
+          sessionId,
+          itemId,
+          participantId,
+        });
+        return { sessionId, participantId, itemId, claimId };
+      });
 
       // Action: Participant unclaims own item
       await t.mutation(api.claims.unclaim, {
@@ -261,51 +259,46 @@ describe("claims authorization", () => {
       const t = convexTest(schema);
 
       // Setup: Create session with host, guest, item, and guest's claim
-      const {
-        sessionId,
-        hostParticipantId,
-        guestParticipantId,
-        itemId,
-        claimId,
-      } = await t.run(async (ctx) => {
-        const sessionId = await ctx.db.insert("sessions", {
-          code: "ABC123",
-          hostName: "Host",
-          createdAt: Date.now(),
+      const { hostParticipantId, guestParticipantId, itemId, claimId } =
+        await t.run(async (ctx) => {
+          const sessionId = await ctx.db.insert("sessions", {
+            code: "ABC123",
+            hostName: "Host",
+            createdAt: Date.now(),
+          });
+          const hostParticipantId = await ctx.db.insert("participants", {
+            sessionId,
+            name: "Host",
+            isHost: true,
+            joinedAt: Date.now(),
+            secret: "hostParticipantId-secret",
+          });
+          const guestParticipantId = await ctx.db.insert("participants", {
+            sessionId,
+            name: "Guest",
+            isHost: false,
+            joinedAt: Date.now(),
+            secret: "guestParticipantId-secret",
+          });
+          const itemId = await ctx.db.insert("items", {
+            sessionId,
+            name: "Burger",
+            price: 1500,
+            quantity: 1,
+          });
+          const claimId = await ctx.db.insert("claims", {
+            sessionId,
+            itemId,
+            participantId: guestParticipantId,
+          });
+          return {
+            sessionId,
+            hostParticipantId,
+            guestParticipantId,
+            itemId,
+            claimId,
+          };
         });
-        const hostParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Host",
-          isHost: true,
-          joinedAt: Date.now(),
-          secret: "hostParticipantId-secret",
-        });
-        const guestParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Guest",
-          isHost: false,
-          joinedAt: Date.now(),
-          secret: "guestParticipantId-secret",
-        });
-        const itemId = await ctx.db.insert("items", {
-          sessionId,
-          name: "Burger",
-          price: 1500,
-          quantity: 1,
-        });
-        const claimId = await ctx.db.insert("claims", {
-          sessionId,
-          itemId,
-          participantId: guestParticipantId,
-        });
-        return {
-          sessionId,
-          hostParticipantId,
-          guestParticipantId,
-          itemId,
-          claimId,
-        };
-      });
 
       // Action: Host unclaims guest's item
       await t.mutation(api.claims.unclaim, {
@@ -324,8 +317,8 @@ describe("claims authorization", () => {
       const t = convexTest(schema);
 
       // Setup: Create session with two non-host participants
-      const { sessionId, participant1Id, participant2Id, itemId, claimId } =
-        await t.run(async (ctx) => {
+      const { participant1Id, participant2Id, itemId } = await t.run(
+        async (ctx) => {
           const sessionId = await ctx.db.insert("sessions", {
             code: "ABC123",
             hostName: "Host",
@@ -365,7 +358,8 @@ describe("claims authorization", () => {
             participantId: participant1Id,
           });
           return { sessionId, participant1Id, participant2Id, itemId, claimId };
-        });
+        },
+      );
 
       // Action & Verify: Participant 2 cannot unclaim Participant 1's item
       await expect(
@@ -384,82 +378,19 @@ describe("claims authorization", () => {
       const t = convexTest(schema);
 
       // Setup: Create session with host, guest, item, and guest's claim
-      const {
-        sessionId,
-        hostParticipantId,
-        guestParticipantId,
-        itemId,
-        claimId,
-      } = await t.run(async (ctx) => {
-        const sessionId = await ctx.db.insert("sessions", {
-          code: "ABC123",
-          hostName: "Host",
-          createdAt: Date.now(),
-        });
-        const hostParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Host",
-          isHost: true,
-          joinedAt: Date.now(),
-          secret: "hostParticipantId-secret",
-        });
-        const guestParticipantId = await ctx.db.insert("participants", {
-          sessionId,
-          name: "Guest",
-          isHost: false,
-          joinedAt: Date.now(),
-          secret: "guestParticipantId-secret",
-        });
-        const itemId = await ctx.db.insert("items", {
-          sessionId,
-          name: "Burger",
-          price: 1500,
-          quantity: 1,
-        });
-        const claimId = await ctx.db.insert("claims", {
-          sessionId,
-          itemId,
-          participantId: guestParticipantId,
-        });
-        return {
-          sessionId,
-          hostParticipantId,
-          guestParticipantId,
-          itemId,
-          claimId,
-        };
-      });
-
-      // Action: Host unclaims guest's item
-      await t.mutation(api.claims.unclaimByHost, {
-        itemId,
-        participantId: guestParticipantId,
-        hostParticipantId,
-        secret: "hostParticipantId-secret",
-      });
-
-      // Verify: Claim was deleted
-      const claim = await t.run(async (ctx) => ctx.db.get(claimId));
-      expect(claim).toBeNull();
-    });
-
-    it("rejects non-host using unclaimByHost (BTEST-07)", async () => {
-      const t = convexTest(schema);
-
-      // Setup: Create session with participants and claim
-      const { sessionId, guestParticipantId, itemId, claimId } = await t.run(
-        async (ctx) => {
+      const { hostParticipantId, guestParticipantId, itemId, claimId } =
+        await t.run(async (ctx) => {
           const sessionId = await ctx.db.insert("sessions", {
             code: "ABC123",
             hostName: "Host",
             createdAt: Date.now(),
           });
-          await ctx.db.insert("participants", {
+          const hostParticipantId = await ctx.db.insert("participants", {
             sessionId,
             name: "Host",
             isHost: true,
             joinedAt: Date.now(),
-            secret: "unused-secret",
+            secret: "hostParticipantId-secret",
           });
           const guestParticipantId = await ctx.db.insert("participants", {
             sessionId,
@@ -479,9 +410,65 @@ describe("claims authorization", () => {
             itemId,
             participantId: guestParticipantId,
           });
-          return { sessionId, guestParticipantId, itemId, claimId };
-        },
-      );
+          return {
+            sessionId,
+            hostParticipantId,
+            guestParticipantId,
+            itemId,
+            claimId,
+          };
+        });
+
+      // Action: Host unclaims guest's item
+      await t.mutation(api.claims.unclaimByHost, {
+        itemId,
+        participantId: guestParticipantId,
+        hostParticipantId,
+        secret: "hostParticipantId-secret",
+      });
+
+      // Verify: Claim was deleted
+      const claim = await t.run(async (ctx) => ctx.db.get(claimId));
+      expect(claim).toBeNull();
+    });
+
+    it("rejects non-host using unclaimByHost (BTEST-07)", async () => {
+      const t = convexTest(schema);
+
+      // Setup: Create session with participants and claim
+      const { guestParticipantId, itemId } = await t.run(async (ctx) => {
+        const sessionId = await ctx.db.insert("sessions", {
+          code: "ABC123",
+          hostName: "Host",
+          createdAt: Date.now(),
+        });
+        await ctx.db.insert("participants", {
+          sessionId,
+          name: "Host",
+          isHost: true,
+          joinedAt: Date.now(),
+          secret: "unused-secret",
+        });
+        const guestParticipantId = await ctx.db.insert("participants", {
+          sessionId,
+          name: "Guest",
+          isHost: false,
+          joinedAt: Date.now(),
+          secret: "guestParticipantId-secret",
+        });
+        const itemId = await ctx.db.insert("items", {
+          sessionId,
+          name: "Burger",
+          price: 1500,
+          quantity: 1,
+        });
+        const claimId = await ctx.db.insert("claims", {
+          sessionId,
+          itemId,
+          participantId: guestParticipantId,
+        });
+        return { sessionId, guestParticipantId, itemId, claimId };
+      });
 
       // Action & Verify: Non-host cannot use unclaimByHost
       await expect(

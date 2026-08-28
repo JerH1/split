@@ -88,11 +88,12 @@ export function calculateTipShare(
         ((participantSubtotal + participantTax) * tipValue) / 100,
       );
 
-    case "manual":
+    case "manual": {
       // tipValue is a fixed amount in cents; distribute proportionally by subtotal
       if (groupSubtotal === 0) return 0;
       const proportion = participantSubtotal / groupSubtotal;
       return Math.round(proportion * tipValue);
+    }
 
     default:
       return 0;

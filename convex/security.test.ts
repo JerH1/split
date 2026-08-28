@@ -344,7 +344,7 @@ describe("receipt storage", () => {
 
   it("will not OCR a file that is not the bill's own receipt", async () => {
     const t = convexTest(schema);
-    const { sessionId, hostParticipantId, hostSecret } = await createBill(t);
+    const { sessionId } = await createBill(t);
 
     // Some other file in the deployment's storage - another bill's receipt,
     // say. The vision model must not be pointed at it.

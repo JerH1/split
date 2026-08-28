@@ -1,3 +1,10 @@
 # Ignore artifacts:
 dist
 coverage
+
+# Generated or vendored by the Convex CLI. Reformatting these would put the
+# repo permanently at odds with whatever `npx convex ai-files install` and
+# `npx convex dev` write out next.
+.agents
+.convex
+convex/_generated

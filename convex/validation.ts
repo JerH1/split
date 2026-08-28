@@ -28,8 +28,8 @@ export const ALLOWED_IMAGE_TYPES = [
 // "Alice\u202E" or one padded with zero-width spaces reads as another person's
 // in the roster, which is impersonation in an app where the roster is the only
 // thing identifying who owes what.
-// eslint-disable-next-line no-control-regex
 const INVISIBLE_OR_BIDI =
+  // eslint-disable-next-line no-control-regex -- matching control characters is the whole point
   /[\u0000-\u001F\u007F-\u009F\u200B-\u200F\u202A-\u202E\u2060-\u2064\u2066-\u2069\uFEFF]/g;
 
 /** Drop control, zero-width, and bidi-override characters from user text. */

@@ -35,7 +35,6 @@ export default function ClaimableItem({
   isDraft = false,
   onDraftSave,
   onDraftCancel,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onDraftChange: _onDraftChange,
 }: ClaimableItemProps) {
   // Check if current user has claimed this item

@@ -1,17 +1,9 @@
 import { convexTest } from "convex-test";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import schema from "./schema";
 import { api } from "./_generated/api";
-import { Id } from "./_generated/dataModel";
 
 describe("sessions authorization", () => {
-  // Test fixtures
-  let sessionId: Id<"sessions">;
-  let hostParticipantId: Id<"participants">;
-  let nonHostParticipantId: Id<"participants">;
-  let otherSessionId: Id<"sessions">;
-  let otherSessionHostId: Id<"participants">;
-
   describe("updateTip", () => {
     it("allows host to update tip (BTEST-03, BTEST-07)", async () => {
       const t = convexTest(schema);
