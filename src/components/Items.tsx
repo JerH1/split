@@ -10,6 +10,7 @@ import ReceiptBalance from "../components/ReceiptBalance";
 import { updateMerchantNameInBillHistory } from "../lib/billHistory";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { Context } from "../pages/Session";
+import { initial, personColorVar } from "../lib/participantColors";
 
 // Receipt processing state machine
 type ReceiptState =
@@ -234,182 +235,209 @@ export default function Items() {
     setDraftItem({ name, price, quantity });
   }
 
+  const sortedParticipants = [...(participants ?? [])].sort(
+    (a, b) => a.joinedAt - b.joinedAt,
+  );
+  const claimedItemIds = new Set((claims ?? []).map((c) => c.itemId));
+  const unclaimedCount = (items ?? []).filter(
+    (item) => !claimedItemIds.has(item._id),
+  ).length;
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 p-4">
       <h1 className="sr-only">Items</h1>
-      <div>
-        {/* Who's Here section */}
-        {participants && participants.length > 0 && (
-          <div className="mb-3">
-            <h2 className="text-lg font-semibold mb-2">
-              Who's Here ({participants.length})
-            </h2>
-            <div className="flex flex-wrap gap-1.5">
-              {[...participants]
-                .sort((a, b) => a.joinedAt - b.joinedAt)
-                .map((participant) => (
-                  <div
-                    key={participant._id}
-                    className="flex items-center gap-1 px-2 py-0.5 bg-gray-100 rounded-full text-sm"
-                  >
-                    <span className="font-medium">{participant.name}</span>
-                    {participant.isHost && (
-                      <span className="text-xs text-gray-700">(host)</span>
-                    )}
-                  </div>
-                ))}
-            </div>
+
+      {/* Merchant, once the receipt has told us who we are eating at */}
+      {session.merchant && (
+        <h2 className="font-display text-xl font-extrabold leading-[1.3] text-ink">
+          {session.merchant}
+        </h2>
+      )}
+
+      {/* Who's Here section */}
+      {sortedParticipants.length > 0 && (
+        <div className="space-y-2">
+          <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
+            Who's Here ({sortedParticipants.length})
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            {sortedParticipants.map((participant, index) => (
+              <div
+                key={participant._id}
+                className="flex items-center gap-1.5 rounded-full border-card border-line bg-surface py-0.5 pl-0.5 pr-3 text-sm"
+              >
+                <span
+                  aria-hidden="true"
+                  className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-line text-[11px] font-bold text-on-person"
+                  style={{ background: personColorVar(index) }}
+                >
+                  {initial(participant.name)}
+                </span>
+                <span className="font-bold text-ink">{participant.name}</span>
+                {participant.isHost && (
+                  <span className="text-xs font-semibold text-ink-3">host</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Receipt section */}
+      <div className="space-y-2">
+        <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
+          Receipt
+        </h2>
+
+        {/* Idle state: show capture UI */}
+        {receiptState.step === "idle" && (
+          <div className="space-y-2">
+            {session.receiptImageId && (
+              <div className="flex items-center gap-3 rounded-card border-card border-line bg-surface p-2.5 shadow-hard-sm">
+                <span
+                  aria-hidden="true"
+                  className="h-11 w-9 shrink-0 rounded-md border-2 border-line"
+                  style={{
+                    background:
+                      "repeating-linear-gradient(180deg, var(--surface-sunk) 0 3px, var(--line-soft) 3px 4px)",
+                  }}
+                />
+                <p className="flex-1 text-sm text-ink-2">
+                  Receipt scanned. Scanning another replaces every item.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowReceiptImage(true)}
+                  className="min-h-11 shrink-0 rounded-full border-2 border-line px-3 text-xs font-bold text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  View
+                </button>
+              </div>
+            )}
+            {/* Scanning a receipt replaces every item on the bill, so it is
+                host-only server-side. Showing the buttons to guests would
+                only produce an upload the next step rejects. */}
+            {isHost ? (
+              <ReceiptCapture
+                sessionId={session._id}
+                participantId={currentParticipantId}
+                secret={secret}
+                onUpload={handleReceiptUpload}
+              />
+            ) : (
+              <p className="text-sm text-ink-2">
+                Only the host can scan a receipt for this bill.
+              </p>
+            )}
           </div>
         )}
 
-        {/* Receipt section */}
-        <div className="mb-3">
-          <h2 className="text-lg font-semibold mb-2">Receipt</h2>
+        {/* Uploading state */}
+        {receiptState.step === "uploading" && (
+          <div role="status" className="py-6 text-center">
+            <div
+              aria-hidden="true"
+              className="mx-auto h-8 w-8 animate-spin rounded-full border-3 border-line-soft border-t-brand"
+            ></div>
+            <p className="mt-3 text-ink-2">Uploading...</p>
+          </div>
+        )}
 
-          {/* Idle state: show capture UI */}
-          {receiptState.step === "idle" && (
-            <div>
-              {session.receiptImageId && (
-                <div className="mb-3">
-                  <p className="text-sm text-gray-600">
-                    Receipt uploaded. Upload a new one to replace existing
-                    items.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowReceiptImage(true)}
-                    className="inline-flex min-h-[44px] items-center text-sm text-blue-700 underline hover:text-blue-800 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
-                  >
-                    View original receipt
-                  </button>
-                </div>
-              )}
-              {/* Scanning a receipt replaces every item on the bill, so it is
-                  host-only server-side. Showing the buttons to guests would
-                  only produce an upload the next step rejects. */}
-              {isHost ? (
-                <ReceiptCapture
-                  sessionId={session._id}
-                  participantId={currentParticipantId}
-                  secret={secret}
-                  onUpload={handleReceiptUpload}
-                />
-              ) : (
-                <p className="text-sm text-gray-600">
-                  Only the host can scan a receipt for this bill.
+        {/* Processing state */}
+        {receiptState.step === "processing" && (
+          <div role="status" className="py-6 text-center">
+            <div
+              aria-hidden="true"
+              className="mx-auto h-8 w-8 animate-spin rounded-full border-3 border-line-soft border-t-brand"
+            ></div>
+            <p className="mt-3 font-semibold text-ink">Analyzing receipt...</p>
+            <p className="mt-1 text-sm text-ink-2">Extracting items with AI</p>
+          </div>
+        )}
+
+        {/* Error state */}
+        {receiptState.step === "error" && (
+          <div
+            role="alert"
+            className="rounded-card border-card border-alert bg-alert-tint p-4 text-center"
+          >
+            <svg
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              className="mx-auto mb-2 h-9 w-9 text-alert"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2.2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            {receiptState.message.includes("\n\n") ? (
+              <>
+                <p className="font-bold text-alert-ink">
+                  {receiptState.message.split("\n\n")[0]}
                 </p>
-              )}
-            </div>
-          )}
+                <p className="mt-1 text-sm text-ink-2">
+                  {receiptState.message.split("\n\n")[1]}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-bold text-alert-ink">Something went wrong</p>
+                <p className="mt-1 text-sm text-ink-2">
+                  {receiptState.message}
+                </p>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="mt-4 min-h-11 rounded-full border-card border-line bg-accent px-5 font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+      </div>
 
-          {/* Uploading state */}
-          {receiptState.step === "uploading" && (
-            <div role="status" className="text-center py-6">
-              <div
-                aria-hidden="true"
-                className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"
-              ></div>
-              <p className="mt-3 text-gray-600">Uploading...</p>
-            </div>
-          )}
+      {/* Items list */}
+      <div className="space-y-2">
+        {items && items.length > 0 && (
+          <ReceiptBalance
+            receiptTotal={session.receiptTotal}
+            itemsSubtotal={groupSubtotal}
+            fees={fees ?? []}
+          />
+        )}
 
-          {/* Processing state */}
-          {receiptState.step === "processing" && (
-            <div role="status" className="text-center py-6">
-              <div
-                aria-hidden="true"
-                className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"
-              ></div>
-              <p className="mt-3 text-gray-600">Analyzing receipt...</p>
-              <p className="text-sm text-gray-600 mt-1">
-                Extracting items with AI
-              </p>
-            </div>
-          )}
-
-          {/* Error state */}
-          {receiptState.step === "error" && (
-            <div role="alert" className="text-center py-6">
-              <div className="text-red-600 mb-3">
-                <svg
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-12 w-12 mx-auto"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              {receiptState.message.includes("\n\n") ? (
-                <>
-                  <p className="text-red-700 font-medium">
-                    {receiptState.message.split("\n\n")[0]}
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {receiptState.message.split("\n\n")[1]}
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p className="text-red-700 font-medium">
-                    Something went wrong
-                  </p>
-                  <p className="text-sm text-gray-600 mt-1">
-                    {receiptState.message}
-                  </p>
-                </>
-              )}
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="mt-4 min-h-[44px] px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
-              >
-                Try Again
-              </button>
-            </div>
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
+            Items {items && items.length > 0 ? `(${items.length})` : ""}
+          </h2>
+          {unclaimedCount > 0 && (
+            <span className="text-xs font-bold text-alert">
+              {unclaimedCount} up for grabs
+            </span>
           )}
         </div>
 
-        {/* Items list */}
-        <div className="mb-3">
-          {items && items.length > 0 && (
-            <div className="mb-3">
-              <ReceiptBalance
-                receiptTotal={session.receiptTotal}
-                itemsSubtotal={groupSubtotal}
-                fees={fees ?? []}
-              />
-            </div>
-          )}
-          <div className="flex flex-row justify-between">
-            <h2 className="text-lg font-semibold mb-2">
-              Items {items && items.length > 0 ? `(${items.length})` : ""}
-            </h2>
-            <div className="text-sm text-gray-600 pt-1">
-              {session.merchant ? session.merchant : null}
-            </div>
-          </div>
-          <div className="space-y-1">
-            {items?.map((item) => (
-              <ClaimableItem
-                key={item._id}
-                item={item}
-                claims={(claims ?? []).filter((c) => c.itemId === item._id)}
-                participants={participants ?? []}
-                currentParticipantId={currentParticipantId}
-                secret={secret}
-                isHost={isHost}
-                isLocked={isLocked}
-              />
-            ))}
-          </div>
+        <div className="space-y-2.5">
+          {items?.map((item) => (
+            <ClaimableItem
+              key={item._id}
+              item={item}
+              claims={(claims ?? []).filter((c) => c.itemId === item._id)}
+              participants={participants ?? []}
+              currentParticipantId={currentParticipantId}
+              secret={secret}
+              isHost={isHost}
+              isLocked={isLocked}
+            />
+          ))}
 
           {/* Draft item - local only until saved */}
           {draftItem && (
@@ -432,33 +460,33 @@ export default function Items() {
               onDraftChange={handleDraftChange}
             />
           )}
-
-          {/* Add item button - available to all participants */}
-          {!isLocked && (
-            <button
-              type="button"
-              onClick={() => setDraftItem({ name: "", price: 0, quantity: 1 })}
-              disabled={draftItem !== null}
-              className={`w-full mt-2 min-h-[44px] py-3 px-4 border-2 border-dashed rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
-                draftItem !== null
-                  ? "border-gray-300 text-gray-500 cursor-not-allowed"
-                  : "border-gray-400 text-gray-700 hover:border-gray-500 hover:text-gray-900"
-              }`}
-            >
-              + Add Item
-            </button>
-          )}
-
-          {/* Items total */}
-          {items && items.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-gray-200 flex justify-between items-center">
-              <span className="font-medium">Items Total</span>
-              <span className="font-semibold">
-                ${(groupSubtotal / 100).toFixed(2)}
-              </span>
-            </div>
-          )}
         </div>
+
+        {/* Add item button - available to all participants */}
+        {!isLocked && (
+          <button
+            type="button"
+            onClick={() => setDraftItem({ name: "", price: 0, quantity: 1 })}
+            disabled={draftItem !== null}
+            className={`min-h-12 w-full rounded-card border-card border-dashed py-3 px-4 font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page ${
+              draftItem !== null
+                ? "cursor-not-allowed border-ink-4 text-ink-4"
+                : "border-line text-ink"
+            }`}
+          >
+            + Add Item
+          </button>
+        )}
+
+        {/* Items total */}
+        {items && items.length > 0 && (
+          <div className="flex items-center justify-between border-t-2 border-line-soft pt-3">
+            <span className="font-bold text-ink-2">Items Total</span>
+            <span className="tabular font-display text-xl font-extrabold text-ink">
+              ${(groupSubtotal / 100).toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Receipt Image Viewer Modal */}

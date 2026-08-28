@@ -257,15 +257,19 @@ export default function TaxTipSettings() {
   }
 
   return (
-    <div className="p-4 space-y-4">
-      <h1 className="sr-only">Tax & Tip</h1>
+    <div className="space-y-3 p-4">
+      <h1 className="sr-only">Tax &amp; Tip</h1>
 
       {/* Taxes & Fees Section */}
-      <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="rounded-card border-card border-line bg-surface p-4 shadow-hard-sm">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="font-semibold text-gray-800">Taxes & Fees</h2>
+          <h2 className="font-display text-lg font-extrabold text-ink">
+            Taxes &amp; Fees
+          </h2>
           {!isHost && (
-            <span className="text-xs text-gray-700">(set by host)</span>
+            <span className="text-xs font-semibold text-ink-3">
+              set by host
+            </span>
           )}
         </div>
 
@@ -296,10 +300,10 @@ export default function TaxTipSettings() {
                       onFocus={(e) => e.target.select()}
                       placeholder="Label"
                       aria-label={`Name of fee ${fee.label || "(unnamed)"}`}
-                      className="flex-1 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
+                      className="min-h-11 flex-1 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                     />
                     <div className="flex items-center gap-1">
-                      <span aria-hidden="true" className="text-gray-600">
+                      <span aria-hidden="true" className="font-bold text-ink-3">
                         $
                       </span>
                       <input
@@ -317,13 +321,13 @@ export default function TaxTipSettings() {
                         onFocus={(e) => e.target.select()}
                         placeholder="0.00"
                         aria-label={`Amount for ${fee.label || "this fee"} in dollars`}
-                        className="w-20 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
+                        className="tabular w-20 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                       />
                     </div>
                     <button
                       type="button"
                       onClick={() => handleRemoveFee(fee._id)}
-                      className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-md p-2 text-gray-600 hover:text-red-700 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                      className="flex min-h-11 min-w-11 items-center justify-center rounded-tile p-2 text-ink-3 transition-colors hover:text-alert focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                       aria-label={`Remove ${fee.label || "unnamed"} fee`}
                     >
                       <svg
@@ -344,10 +348,10 @@ export default function TaxTipSettings() {
                   </>
                 ) : (
                   <>
-                    <span className="flex-1 text-gray-700 text-sm">
+                    <span className="flex-1 text-sm text-ink-2">
                       {fee.label}
                     </span>
-                    <span className="text-gray-900 font-medium">
+                    <span className="tabular font-bold text-ink">
                       ${(fee.amount / 100).toFixed(2)}
                     </span>
                   </>
@@ -361,7 +365,7 @@ export default function TaxTipSettings() {
             <button
               type="button"
               onClick={handleAddFee}
-              className="w-full min-h-[44px] py-2 px-3 border-2 border-dashed border-gray-400 text-gray-700 rounded-md hover:border-gray-500 hover:text-gray-900 transition-colors text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+              className="min-h-11 w-full rounded-tile border-card border-dashed border-line px-3 py-2 text-sm font-bold text-ink transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               + Add fee
             </button>
@@ -369,18 +373,18 @@ export default function TaxTipSettings() {
 
           {/* Empty state for non-host */}
           {!isHost && fees.length === 0 && (
-            <p className="text-sm text-gray-600 italic">
-              No taxes or fees added
-            </p>
+            <p className="text-sm italic text-ink-3">No taxes or fees added</p>
           )}
         </div>
 
         {/* Fees total */}
         {fees.length > 0 && (
-          <div className="mt-3 pt-2 border-t border-gray-200">
+          <div className="mt-3 border-t-2 border-line-soft pt-2.5">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Total taxes & fees:</span>
-              <span className="font-medium">
+              <span className="font-semibold text-ink-2">
+                Total taxes &amp; fees:
+              </span>
+              <span className="tabular font-bold text-ink">
                 ${(totalFees / 100).toFixed(2)}
               </span>
             </div>
@@ -389,11 +393,13 @@ export default function TaxTipSettings() {
       </div>
 
       {/* Tip Section */}
-      <div className="p-4 bg-gray-50 rounded-lg">
+      <div className="rounded-card border-card border-line bg-surface p-4 shadow-hard-sm">
         <div className="flex justify-between items-center mb-3">
-          <h2 className="font-semibold text-gray-800">Tip</h2>
+          <h2 className="font-display text-lg font-extrabold text-ink">Tip</h2>
           {!isHost && (
-            <span className="text-xs text-gray-700">(set by host)</span>
+            <span className="text-xs font-semibold text-ink-3">
+              set by host
+            </span>
           )}
         </div>
 
@@ -417,10 +423,10 @@ export default function TaxTipSettings() {
                   tabIndex={tipType === value ? 0 : -1}
                   onClick={() => handleTipTypeChange(value)}
                   onKeyDown={(e) => handleTipTypeKeyDown(e, index)}
-                  className={`min-h-[44px] px-3 py-2 rounded-md text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
+                  className={`min-h-11 rounded-full border-2 border-line px-3.5 py-2 text-sm font-bold transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page ${
                     tipType === value
-                      ? "bg-blue-600 text-white"
-                      : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+                      ? "bg-accent text-accent-ink shadow-hard-sm"
+                      : "bg-surface text-ink-2"
                   }`}
                 >
                   {label}
@@ -432,7 +438,7 @@ export default function TaxTipSettings() {
             <div className="flex items-center gap-2">
               {tipType === "manual" ? (
                 <>
-                  <span aria-hidden="true" className="text-gray-600">
+                  <span aria-hidden="true" className="font-bold text-ink-3">
                     $
                   </span>
                   <input
@@ -446,7 +452,7 @@ export default function TaxTipSettings() {
                     onFocus={(e) => e.target.select()}
                     placeholder="0.00"
                     aria-label="Tip amount in dollars"
-                    className="w-28 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    className="tabular w-28 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   />
                 </>
               ) : (
@@ -466,9 +472,9 @@ export default function TaxTipSettings() {
                         ? "Tip percentage of subtotal plus tax"
                         : "Tip percentage of subtotal"
                     }
-                    className="w-20 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                    className="tabular w-20 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 text-sm font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   />
-                  <span aria-hidden="true" className="text-gray-600">
+                  <span aria-hidden="true" className="font-bold text-ink-3">
                     %
                   </span>
                 </>
@@ -478,7 +484,7 @@ export default function TaxTipSettings() {
         ) : (
           <div className="space-y-2">
             {/* Read-only display for non-host */}
-            <div className="text-sm text-gray-600">
+            <div className="text-sm font-semibold text-ink-2">
               {tipType === "percent_subtotal" &&
                 `${tipInput || 0}% on subtotal`}
               {tipType === "percent_total" &&
@@ -491,10 +497,10 @@ export default function TaxTipSettings() {
 
         {/* Tip Preview */}
         {groupSubtotal > 0 && (
-          <div className="mt-3 pt-2 border-t border-gray-200">
+          <div className="mt-3 border-t-2 border-line-soft pt-2.5">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Tip total:</span>
-              <span className="font-medium">
+              <span className="font-semibold text-ink-2">Tip total:</span>
+              <span className="tabular font-bold text-ink">
                 ${(tipPreview / 100).toFixed(2)}
               </span>
             </div>
@@ -504,10 +510,12 @@ export default function TaxTipSettings() {
 
       {/* Grand Total Preview */}
       {groupSubtotal > 0 && (
-        <div className="p-4 bg-blue-50 rounded-lg">
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-gray-800">Group Total</span>
-            <span className="text-xl font-bold text-blue-600">
+        <div className="rounded-card border-card border-total-line bg-total-bg p-4">
+          <div className="flex items-center justify-between">
+            <span className="font-display text-lg font-extrabold text-total-fg">
+              Group Total
+            </span>
+            <span className="tabular font-display text-2xl font-extrabold text-accent">
               $
               {(
                 (groupSubtotal + totalFees + currentGratuity + tipPreview) /
@@ -515,7 +523,7 @@ export default function TaxTipSettings() {
               ).toFixed(2)}
             </span>
           </div>
-          <div className="mt-1.5 text-sm text-gray-600 space-y-1">
+          <div className="tabular mt-2 space-y-1 text-sm text-total-muted">
             <div className="flex justify-between">
               <span>Subtotal:</span>
               <span>${(groupSubtotal / 100).toFixed(2)}</span>

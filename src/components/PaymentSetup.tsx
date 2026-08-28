@@ -80,7 +80,7 @@ export default function PaymentSetup({
       <button
         type="button"
         onClick={() => setIsEditing(true)}
-        className="text-sm text-blue-600 underline hover:text-blue-700"
+        className="min-h-11 text-sm font-bold text-ink underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         {currentHandle && currentMethod
           ? `Paid via ${PAYMENT_METHOD_LABELS[currentMethod]} ${formatHandle(currentMethod, currentHandle)} — change`
@@ -98,10 +98,10 @@ export default function PaymentSetup({
             type="button"
             onClick={() => setMethod(option)}
             aria-pressed={method === option}
-            className={`px-3 py-1.5 rounded-full text-sm transition-colors ${
+            className={`min-h-11 rounded-full border-2 border-line px-3.5 text-sm font-bold transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
               method === option
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                ? "bg-accent text-accent-ink shadow-hard-sm active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                : "bg-surface text-ink-2 active:translate-y-px"
             }`}
           >
             {PAYMENT_METHOD_LABELS[option]}
@@ -122,19 +122,19 @@ export default function PaymentSetup({
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}
-          className="flex-1 min-h-[44px] px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="min-h-11 flex-1 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         />
         <button
           type="button"
           onClick={handleSave}
           disabled={isSaving || handle.trim() === ""}
-          className="min-h-[44px] px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:text-gray-500 transition-colors"
+          className="min-h-11 rounded-full border-2 border-line bg-accent px-4 font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:border-ink-4 disabled:bg-surface disabled:text-ink-4 disabled:shadow-none"
         >
           Save
         </button>
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm font-semibold text-alert-ink">{error}</p>}
 
       <div className="flex gap-3 text-sm">
         <button
@@ -144,7 +144,7 @@ export default function PaymentSetup({
             setError(null);
             setHandle(currentHandle ?? "");
           }}
-          className="text-gray-600 underline hover:text-gray-800"
+          className="min-h-11 font-semibold text-ink-2 underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           Cancel
         </button>
@@ -153,7 +153,7 @@ export default function PaymentSetup({
             type="button"
             onClick={handleRemove}
             disabled={isSaving}
-            className="text-red-600 underline hover:text-red-700"
+            className="min-h-11 font-semibold text-alert underline decoration-2 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
             Remove
           </button>

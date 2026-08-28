@@ -19,19 +19,19 @@ export default function Layout() {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-page">
       {/* Connection status indicator - shows when disconnected */}
       <ConnectionStatus />
 
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:font-medium focus:text-blue-700 focus:shadow-lg focus:ring-2 focus:ring-blue-600"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-tile focus:border-card focus:border-line focus:bg-surface focus:px-4 focus:py-2 focus:font-bold focus:text-ink focus:shadow-hard"
       >
         Skip to content
       </a>
 
       {/* Mobile-first container - max width for tablet/desktop */}
-      <div className="mx-auto max-w-md min-h-screen bg-white shadow-sm">
+      <div className="mx-auto min-h-screen max-w-md bg-page sm:border-x sm:border-line-soft">
         {/* Main content area */}
         <main
           id="main-content"

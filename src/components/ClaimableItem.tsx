@@ -3,6 +3,7 @@ import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Id, Doc } from "../../convex/_generated/dataModel";
 import { PublicParticipant } from "../pages/Session";
+import { initial, personColor } from "../lib/participantColors";
 
 type ItemType = Doc<"items">;
 type DraftItemType = Omit<ItemType, "_creationTime">;
@@ -221,7 +222,7 @@ export default function ClaimableItem({
       <div
         role="group"
         aria-label={isDraft ? "New item" : `Edit ${editTarget}`}
-        className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg"
+        className="flex flex-col gap-2.5 rounded-card border-card border-line bg-surface p-3 shadow-hard-sm"
       >
         {/* Row 1: Name input (full width) */}
         <input
@@ -230,14 +231,14 @@ export default function ClaimableItem({
           onChange={(e) => setEditName(e.target.value)}
           placeholder="Item name"
           aria-label="Item name"
-          className="w-full min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+          className="w-full min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         />
 
         {/* Row 2: Price + Quantity (if qty > 1) + Delete */}
         <div className="flex items-center gap-2">
           {/* Price input with $ prefix */}
           <div className="flex items-center gap-1 min-w-0">
-            <span aria-hidden="true" className="text-gray-600">
+            <span aria-hidden="true" className="font-bold text-ink-3">
               $
             </span>
             <input
@@ -255,14 +256,14 @@ export default function ClaimableItem({
                 }
               }}
               aria-label={`Price for ${editTarget} in dollars`}
-              className="w-24 min-h-[44px] px-3 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+              className="tabular w-24 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             />
           </div>
 
           {/* Quantity input - only shown if quantity > 1 */}
           {editQuantity > 1 && (
             <div className="flex items-center gap-1 min-w-0">
-              <span aria-hidden="true" className="text-gray-600 text-sm">
+              <span aria-hidden="true" className="text-sm font-bold text-ink-3">
                 x
               </span>
               <input
@@ -273,7 +274,7 @@ export default function ClaimableItem({
                 }
                 min="1"
                 aria-label={`Quantity for ${editTarget}`}
-                className="w-14 min-h-[44px] px-2 py-2 border border-gray-500 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                className="tabular w-14 min-h-11 rounded-tile border-2 border-line bg-surface-sunk px-3 py-2 font-semibold text-ink placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               />
             </div>
           )}
@@ -285,7 +286,7 @@ export default function ClaimableItem({
           <button
             type="button"
             onClick={handleDelete}
-            className="min-h-[44px] min-w-[44px] px-3 py-2 text-red-700 hover:bg-red-50 rounded-md transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+            className="flex min-h-11 min-w-11 items-center justify-center rounded-tile px-3 py-2 text-alert transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             aria-label={`Delete ${editTarget}`}
           >
             <svg
@@ -309,14 +310,14 @@ export default function ClaimableItem({
           <button
             type="button"
             onClick={handleCancel}
-            className="flex-1 min-w-0 min-h-[44px] px-3 py-2 text-gray-800 bg-gray-200 hover:bg-gray-300 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+            className="min-h-11 min-w-0 flex-1 rounded-full border-2 border-line bg-surface px-3 py-2 font-bold text-ink transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus active:translate-y-px"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="flex-1 min-w-0 min-h-[44px] px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+            className="min-h-11 min-w-0 flex-1 rounded-full border-2 border-line bg-accent px-3 py-2 font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
           >
             Save
           </button>
@@ -340,56 +341,48 @@ export default function ClaimableItem({
     isUnclaimed ? "Not claimed" : `Claimed by ${claimerNames.join(", ")}`,
   ].join("");
 
+  const mineColor = personColor(participants, currentParticipantId);
+
   return (
     <div
+      data-testid="item-row"
       onClick={canClaim ? handleTap : undefined}
       onKeyDown={canClaim ? handleRowKeyDown : undefined}
       role={canClaim ? "button" : undefined}
       tabIndex={canClaim ? 0 : undefined}
       aria-pressed={canClaim ? hasClaimed : undefined}
       aria-label={canClaim ? rowLabel : undefined}
-      className={`p-3 rounded-lg transition-all duration-300 ${
+      style={hasClaimed ? { borderColor: mineColor } : undefined}
+      className={`rounded-card border-card p-3 transition-all duration-300 ${
         canClaim
-          ? "cursor-pointer active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          ? "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
           : ""
       } ${
         hasClaimed
-          ? "bg-blue-50 border-l-4 border-l-blue-500 border-y border-r border-y-blue-200 border-r-blue-200"
+          ? "bg-mine-tint shadow-hard-sm"
           : isUnclaimed
-            ? "bg-gray-50 border border-dashed border-gray-400"
-            : "bg-gray-50 border border-gray-200"
-      } ${isFlashing ? "ring-2 ring-blue-400 ring-opacity-75" : ""}`}
+            ? "border-dashed border-alert bg-surface"
+            : "border-line bg-surface shadow-hard-sm"
+      } ${isFlashing ? "ring-2 ring-focus" : ""}`}
     >
-      <div className="flex justify-between items-center">
-        <div>
-          <span className="font-medium">{item.name}</span>
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <span className="font-bold text-ink">{item.name}</span>
           {item.quantity > 1 && (
-            <span className="text-gray-600 text-sm ml-2">x{item.quantity}</span>
+            <span className="ml-2 text-sm font-medium text-ink-3">
+              ×{item.quantity}
+            </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-gray-700">
+        <div className="flex shrink-0 items-center gap-1">
+          <span className="tabular font-display text-lg font-extrabold text-ink">
             ${(item.price / 100).toFixed(2)}
           </span>
-          {showEveryone && (
-            <button
-              type="button"
-              onClick={handleEveryone}
-              aria-pressed={everyoneClaimed}
-              className={`min-h-[44px] px-2.5 rounded-md text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 ${
-                everyoneClaimed
-                  ? "bg-blue-600 text-white hover:bg-blue-700"
-                  : "text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              Everyone
-            </button>
-          )}
           {!isLocked && (
             <button
               type="button"
               onClick={handleEdit}
-              className="min-h-[44px] min-w-[44px] p-2 text-gray-600 hover:bg-gray-200 rounded-md transition-colors flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+              className="flex min-h-11 min-w-11 items-center justify-center rounded-tile p-2 text-ink-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               aria-label={`Edit ${item.name || "item"}`}
             >
               <svg
@@ -406,30 +399,48 @@ export default function ClaimableItem({
         </div>
       </div>
 
-      {/* Claimer names */}
-      {claimerNames.length > 0 && (
-        <div className="mt-2 text-sm text-gray-700 flex flex-wrap gap-1">
+      {/* Claim controls and who has claimed share a row below the price, so a
+          long item name keeps the full width of the one above it. */}
+      {(showEveryone || claimerNames.length > 0) && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {showEveryone && (
+            <button
+              type="button"
+              onClick={handleEveryone}
+              aria-pressed={everyoneClaimed}
+              className={`min-h-11 shrink-0 rounded-full px-3 text-xs font-bold transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                everyoneClaimed
+                  ? "border-2 border-line bg-accent text-accent-ink shadow-hard-sm active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                  : "border-2 border-line text-ink-2"
+              }`}
+            >
+              Everyone
+            </button>
+          )}
           {claims.map((c) => {
             const participant = participants.find(
               (p) => p._id === c.participantId,
             );
             const name = participant?.name ?? "Unknown";
-            const isCurrentUser = c.participantId === currentParticipantId;
+            const color = personColor(participants, c.participantId);
             return (
               <span
                 key={c._id}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs ${
-                  isCurrentUser
-                    ? "bg-blue-100 text-blue-700 font-medium"
-                    : "bg-gray-200 text-gray-700"
-                }`}
+                className="inline-flex items-center gap-1.5 rounded-full border-2 border-line bg-surface py-0.5 pl-0.5 pr-2 text-xs"
               >
-                {name}
+                <span
+                  aria-hidden="true"
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold text-on-person"
+                  style={{ background: color }}
+                >
+                  {initial(name)}
+                </span>
+                <span className="font-bold text-ink">{name}</span>
                 {isHost && !isLocked && (
                   <button
                     type="button"
                     onClick={(e) => handleHostUnclaim(e, c.participantId)}
-                    className="hover:bg-gray-300 rounded-full p-2 -my-1 -mr-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600"
+                    className="-my-1 -mr-1.5 rounded-full p-2 text-ink-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                     aria-label={`Remove ${name}'s claim on ${item.name || "this item"}`}
                   >
                     <svg
@@ -450,19 +461,24 @@ export default function ClaimableItem({
               </span>
             );
           })}
+          {claims.length > 1 && (
+            <span className="text-xs font-semibold text-ink-3">
+              ${(item.price / 100 / claims.length).toFixed(2)} each
+            </span>
+          )}
         </div>
       )}
 
       {/* Unclaimed indicator */}
       {claimerNames.length === 0 && canClaim && (
-        <div aria-hidden="true" className="mt-2 text-sm text-gray-600 italic">
+        <div aria-hidden="true" className="mt-1 text-sm font-bold text-alert">
           Tap to claim
         </div>
       )}
 
       {/* Not joined indicator */}
       {!canClaim && (
-        <div className="mt-2 text-sm text-gray-600 italic">
+        <div className="mt-1 text-sm italic text-ink-3">
           Join to claim items
         </div>
       )}

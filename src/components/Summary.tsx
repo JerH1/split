@@ -4,6 +4,7 @@ import { api } from "../../convex/_generated/api";
 import { useOutletContext } from "react-router";
 import { Context } from "../pages/Session";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
+import { initial, personColor } from "../lib/participantColors";
 import PaymentSetup from "./PaymentSetup";
 import ReadyToggle from "./ReadyToggle";
 import SettleRow from "./SettleRow";
@@ -11,7 +12,14 @@ import { buildSummaryText, shareSummary } from "../lib/shareSummary";
 
 export default function Summary() {
   const context: Context = useOutletContext();
-  const { session, currentParticipantId, isHost, isLocked, secret } = context;
+  const {
+    session,
+    currentParticipantId,
+    participants: roster,
+    isHost,
+    isLocked,
+    secret,
+  } = context;
 
   useDocumentTitle("Totals");
 
@@ -31,9 +39,9 @@ export default function Summary() {
       <div role="status" className="text-center py-8">
         <div
           aria-hidden="true"
-          className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"
+          className="mx-auto h-8 w-8 animate-spin rounded-full border-3 border-line-soft border-t-brand"
         ></div>
-        <p className="mt-3 text-gray-600">Loading totals...</p>
+        <p className="mt-3 text-ink-2">Loading totals...</p>
       </div>
     );
   }
@@ -86,32 +94,31 @@ export default function Summary() {
   }
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-3 p-4">
       <h1 className="sr-only">Totals</h1>
 
       {/* Unclaimed Warning */}
       {unclaimedItems.length > 0 && (
-        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <div className="flex items-center gap-2">
-            <svg
-              aria-hidden="true"
-              className="w-5 h-5 text-yellow-700"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <span className="text-yellow-800 font-medium">
-              {unclaimedItems.length} item{unclaimedItems.length > 1 ? "s" : ""}{" "}
-              unclaimed (${(unclaimedTotal / 100).toFixed(2)})
+        <div className="flex items-center gap-2 rounded-tile border-card border-alert bg-alert-tint p-3">
+          <svg
+            aria-hidden="true"
+            className="h-5 w-5 shrink-0 text-alert"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2.4}
+            strokeLinecap="round"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 8v5M12 17h.01" />
+          </svg>
+          <span className="text-sm font-semibold text-alert-ink">
+            {unclaimedItems.length} item{unclaimedItems.length > 1 ? "s" : ""}{" "}
+            still up for grabs —{" "}
+            <span className="tabular font-bold">
+              ${(unclaimedTotal / 100).toFixed(2)}
             </span>
-          </div>
+          </span>
         </div>
       )}
 
@@ -121,14 +128,15 @@ export default function Summary() {
           const isCurrentUser =
             participant.participantId === currentParticipantId;
           const isExpanded = expandedParticipant === participant.participantId;
+          const color = personColor(roster ?? [], participant.participantId);
 
           return (
             <div
               key={participant.participantId}
-              className={`rounded-lg border-2 transition-colors ${
-                isCurrentUser
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 bg-white"
+              data-testid="participant-card"
+              style={isCurrentUser ? { borderColor: color } : undefined}
+              className={`rounded-card border-card shadow-hard-sm transition-colors ${
+                isCurrentUser ? "bg-mine-tint" : "border-line bg-surface"
               }`}
             >
               {/* Card Header - Clickable */}
@@ -137,74 +145,73 @@ export default function Summary() {
                 onClick={() => toggleExpand(participant.participantId)}
                 aria-expanded={isExpanded}
                 aria-controls={`breakdown-${participant.participantId}`}
-                className="w-full p-4 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                className="w-full rounded-card p-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
               >
-                <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border-card border-line text-sm font-bold text-on-person"
+                    style={{ background: color }}
+                  >
+                    {initial(participant.name)}
+                  </span>
                   {/* A person can carry up to four badges (You, Host, Done,
                       Settled). On a narrow phone that overruns the amount, so
                       the badges wrap and the amount keeps its width. */}
                   <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
-                    <span className="font-semibold text-gray-800">
+                    <span className="font-display text-lg font-extrabold text-ink">
                       {participant.name}
                     </span>
                     {isCurrentUser && (
-                      <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                      <span className="rounded-full bg-ink px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-page">
                         You
                       </span>
                     )}
                     {participant.isHost && (
-                      <span className="text-xs bg-gray-500 text-white px-2 py-0.5 rounded-full">
+                      <span className="rounded-full border-2 border-line px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-2">
                         Host
                       </span>
                     )}
                     {participant.isReady && (
                       <span
-                        className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full"
+                        className="rounded-full border-2 border-line bg-surface px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-ink-2"
                         title="Done claiming"
                       >
                         ✓ Done
                       </span>
                     )}
                     {participant.paidAt !== undefined && (
-                      <span className="text-xs bg-green-600 text-white px-2 py-0.5 rounded-full">
+                      <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-accent-ink">
                         Settled
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xl font-bold text-gray-900">
+                    <span className="tabular font-display text-xl font-extrabold text-ink">
                       ${(participant.total / 100).toFixed(2)}
                     </span>
                     <svg
                       aria-hidden="true"
-                      className={`w-5 h-5 text-gray-600 transition-transform ${
+                      className={`h-5 w-5 text-ink-4 transition-transform ${
                         isExpanded ? "rotate-180" : ""
                       }`}
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
+                      strokeWidth={2.6}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M19 9l-7 7-7-7"
-                      />
+                      <path d="M19 9l-7 7-7-7" />
                     </svg>
                   </div>
                 </div>
 
                 {/* Breakdown Row */}
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-gray-600">
+                <div className="tabular mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-xs font-semibold text-ink-3">
                   <span>Items ${(participant.subtotal / 100).toFixed(2)}</span>
-                  <span aria-hidden="true" className="text-gray-400">
-                    |
-                  </span>
                   <span>
-                    Taxes & Fees ${(participant.tax / 100).toFixed(2)}
-                  </span>
-                  <span aria-hidden="true" className="text-gray-400">
-                    |
+                    Taxes &amp; Fees ${(participant.tax / 100).toFixed(2)}
                   </span>
                   <span>Tip ${(participant.tip / 100).toFixed(2)}</span>
                 </div>
@@ -214,13 +221,13 @@ export default function Summary() {
               {isExpanded && (
                 <div
                   id={`breakdown-${participant.participantId}`}
-                  className="px-4 pb-4 border-t border-gray-200 mt-2 pt-3"
+                  className="mx-3.5 border-t-2 border-line-soft pb-3.5 pt-3"
                 >
-                  <h2 className="text-sm font-medium text-gray-700 mb-2">
+                  <h2 className="mb-2 text-xs font-bold uppercase tracking-[0.14em] text-ink-3">
                     Claimed Items
                   </h2>
                   {participant.claimedItems.length === 0 ? (
-                    <p className="text-sm text-gray-600 italic">
+                    <p className="text-sm italic text-ink-3">
                       No items claimed yet
                     </p>
                   ) : (
@@ -228,17 +235,17 @@ export default function Summary() {
                       {participant.claimedItems.map((item, index) => (
                         <li
                           key={`${item.itemId}-${index}`}
-                          className="flex justify-between text-sm"
+                          className="flex justify-between gap-3 text-sm"
                         >
-                          <span className="text-gray-700">
+                          <span className="text-ink">
                             {item.itemName}
                             {item.claimCount > 1 && (
-                              <span className="text-gray-600 ml-1">
-                                (split {item.claimCount} ways)
+                              <span className="ml-1 text-ink-3">
+                                · split {item.claimCount}
                               </span>
                             )}
                           </span>
-                          <span className="text-gray-600 font-medium">
+                          <span className="tabular font-bold text-ink">
                             ${(item.sharePrice / 100).toFixed(2)}
                           </span>
                         </li>
@@ -247,7 +254,7 @@ export default function Summary() {
                   )}
 
                   {/* Settle up */}
-                  <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+                  <div className="mt-3 space-y-2 border-t-2 border-line-soft pt-3">
                     {currentParticipantId && (
                       <SettleRow
                         participantId={participant.participantId}
@@ -281,24 +288,26 @@ export default function Summary() {
 
       {/* Group Total */}
       {groupSubtotal > 0 && (
-        <div className="p-4 bg-gray-100 rounded-lg">
-          <div className="flex justify-between items-center">
-            <span className="font-semibold text-gray-800">Group Total</span>
-            <span className="text-xl font-bold text-gray-900">
-              ${(groupTotal / 100).toFixed(2)}
+        <div className="flex items-center gap-3 rounded-card border-card border-total-line bg-total-bg p-4">
+          <div className="flex flex-1 flex-col gap-0.5">
+            <span className="font-display text-lg font-extrabold text-total-fg">
+              Table total
             </span>
+            {unclaimedTotal > 0 && (
+              <span className="tabular text-xs font-medium text-total-muted">
+                excludes ${(unclaimedTotal / 100).toFixed(2)} unclaimed
+              </span>
+            )}
           </div>
-          {unclaimedTotal > 0 && (
-            <p className="mt-1 text-sm text-gray-700">
-              Excludes ${(unclaimedTotal / 100).toFixed(2)} in unclaimed items
-            </p>
-          )}
+          <span className="tabular font-display text-2xl font-extrabold text-accent">
+            ${(groupTotal / 100).toFixed(2)}
+          </span>
         </div>
       )}
 
       {/* Am I done claiming? */}
       {me && currentParticipantId && (
-        <div className="p-4 bg-white border border-gray-200 rounded-lg space-y-2">
+        <div className="space-y-2 rounded-card border-card border-line bg-surface p-4 shadow-hard-sm">
           <ReadyToggle
             participantId={currentParticipantId}
             secret={secret}
@@ -306,12 +315,12 @@ export default function Summary() {
             disabled={isLocked}
           />
           {notReady.length > 0 && (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-ink-2">
               Still claiming: {notReady.map((p) => p.name).join(", ")}
             </p>
           )}
           {notReady.length === 0 && participants.length > 1 && (
-            <p className="text-sm text-green-700 font-medium">
+            <p className="text-sm font-bold text-ink">
               Everyone's done claiming — these totals are final.
             </p>
           )}
@@ -324,7 +333,7 @@ export default function Summary() {
           <button
             type="button"
             onClick={handleShare}
-            className="w-full min-h-[44px] py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            className="min-h-12 w-full rounded-card border-card border-line bg-accent px-4 py-3 font-display text-lg font-extrabold text-accent-ink shadow-hard transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-1 active:translate-y-1 active:shadow-none"
           >
             {shareState === "copied"
               ? "Copied to clipboard"
@@ -337,13 +346,13 @@ export default function Summary() {
             <button
               type="button"
               onClick={handleToggleLock}
-              className="w-full min-h-[44px] py-3 px-4 border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
+              className="min-h-12 w-full rounded-card border-card border-line bg-surface px-4 py-3 font-bold text-ink transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-y-px"
             >
               {isLocked ? "Unlock this bill" : "Lock this bill"}
             </button>
           )}
           {isHost && !isLocked && (
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-center text-xs text-ink-3">
               Locking freezes items and claims so nothing changes after people
               pay.
             </p>
@@ -354,7 +363,7 @@ export default function Summary() {
       {/* Empty State */}
       {participants.length === 0 && (
         <div className="text-center py-8">
-          <p className="text-gray-600">No participants yet</p>
+          <p className="text-ink-3">No participants yet</p>
         </div>
       )}
     </div>

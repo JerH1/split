@@ -14,13 +14,10 @@ function ListIcon({ className }: { className?: string }) {
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={2.2}
+      strokeLinecap="round"
     >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M4 6h16M4 10h16M4 14h16M4 18h16"
-      />
+      <path d="M4 6h16M4 10h16M4 14h16M4 18h16" />
     </svg>
   );
 }
@@ -32,13 +29,12 @@ function CalculatorIcon({ className }: { className?: string }) {
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"
-      />
+      <rect x="5" y="3" width="14" height="18" rx="2.5" />
+      <path d="M9 7h6M9 11h.01M12 11h.01M15 11h.01M9 15h.01M12 15h.01M15 15v2" />
     </svg>
   );
 }
@@ -50,13 +46,13 @@ function UsersIcon({ className }: { className?: string }) {
       fill="none"
       viewBox="0 0 24 24"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-      />
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3 20a6 6 0 0 1 12 0" />
+      <path d="M16.5 5.5a3 3 0 0 1 0 5.6M18 20a6 6 0 0 0-2-4.5" />
     </svg>
   );
 }
@@ -73,19 +69,25 @@ export default function TabNavigation({
   return (
     <nav
       aria-label="Bill sections"
-      className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-300 pb-safe"
+      className="fixed bottom-0 left-0 right-0 border-t-2 border-line bg-surface pb-safe"
     >
       <div className="max-w-md mx-auto flex">
-        {tabs.map(({ id, label, Icon }) => {
+        {tabs.map(({ id, label, Icon }, index) => {
           return (
             <NavLink
               to={id}
               key={id}
               className={({ isActive }) => {
-                const baseClasses = `flex-1 flex flex-col items-center justify-center py-2 min-h-14 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600`;
+                // The active tab is a filled panel rather than a tinted icon:
+                // it is the one piece of chrome that has to read at a glance
+                // while someone is holding a phone over a table.
+                const base =
+                  "flex-1 flex flex-col items-center justify-center gap-1 py-2.5 min-h-14 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus";
+                const divider =
+                  index < tabs.length - 1 ? " border-r-2 border-line" : "";
                 return isActive
-                  ? baseClasses + " text-blue-600"
-                  : baseClasses + " text-gray-500";
+                  ? `${base}${divider} bg-accent text-accent-ink`
+                  : `${base}${divider} text-ink-3`;
               }}
             >
               {({ isActive }) => (
@@ -95,13 +97,13 @@ export default function TabNavigation({
                   <div className="relative" aria-hidden="true">
                     <Icon className="w-6 h-6" />
                     {id === "items" && unclaimedCount > 0 && (
-                      <span className="absolute -top-1 -right-2 bg-red-600 text-white text-xs font-medium rounded-full min-w-4.5 h-4.5 flex items-center justify-center px-1">
+                      <span className="absolute -top-1.5 -right-2.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-line bg-alert px-1 text-[10px] font-bold text-alert-on">
                         {unclaimedCount}
                       </span>
                     )}
                   </div>
                   <span
-                    className={`text-xs mt-1 ${isActive ? "font-medium" : ""}`}
+                    className={`text-[11px] ${isActive ? "font-bold" : "font-semibold"}`}
                   >
                     {label}
                   </span>

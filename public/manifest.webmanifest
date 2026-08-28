@@ -1,13 +1,13 @@
 {
-  "name": "Split — bill splitting",
-  "short_name": "Split",
+  "name": "SplitSnax — bill splitting",
+  "short_name": "SplitSnax",
   "description": "Snap a receipt, share a code, and split the bill in real time.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#2563eb",
+  "background_color": "#08070C",
+  "theme_color": "#08070C",
   "icons": [
     {
       "src": "/icon-192.png",

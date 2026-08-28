@@ -112,7 +112,7 @@ test.describe("Join Flow", () => {
 
       // 3. Wait for items to load - verify "Tap to claim" hint is visible
       const pizzaItem = guestPage
-        .locator(".rounded-lg")
+        .locator('[data-testid="item-row"]')
         .filter({ hasText: "Pizza" });
       await expect(pizzaItem).toBeVisible();
       await expect(pizzaItem.locator("text=Tap to claim")).toBeVisible();
@@ -152,7 +152,7 @@ test.describe("Join Flow", () => {
 
       // Wait for the item to load - verify "Tap to claim" hint is visible
       const pastaItem = guestPage
-        .locator(".rounded-lg")
+        .locator('[data-testid="item-row"]')
         .filter({ hasText: "Pasta" })
         .filter({ hasText: "Tap to claim" });
       await expect(pastaItem).toBeVisible();
@@ -163,7 +163,7 @@ test.describe("Join Flow", () => {
       // Wait for claim to be processed (Carol's name appears in pill)
       await expect(
         guestPage
-          .locator(".rounded-lg")
+          .locator('[data-testid="item-row"]')
           .filter({ hasText: "Pasta" })
           .locator("text=Carol"),
       ).toBeVisible();
@@ -174,7 +174,7 @@ test.describe("Join Flow", () => {
       // 4. Verify Carol's participant card shows with correct total
       // Carol's card should have $20.00 (font-bold for total)
       const carolCard = guestPage
-        .locator(".rounded-lg.border-2")
+        .locator('[data-testid="participant-card"]')
         .filter({ hasText: "Carol" });
       await expect(carolCard).toBeVisible();
 

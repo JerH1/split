@@ -67,13 +67,13 @@ export default function SettleRow({
               href={paymentUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center min-h-[44px] px-3 rounded-md bg-blue-600 text-white text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="inline-flex min-h-11 items-center rounded-full border-2 border-line bg-accent px-4 text-sm font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
             >
               Pay {name} ${(total / 100).toFixed(2)}
             </a>
           ) : (
             // "Other" has no deep link, so the handle itself is the useful thing.
-            <span className="text-sm text-gray-700">
+            <span className="text-sm text-ink-2">
               Pay {name} via {formatHandle(paymentMethod, paymentHandle)}
             </span>
           )}
@@ -92,10 +92,10 @@ export default function SettleRow({
             })
           }
           aria-pressed={isPaid}
-          className={`inline-flex items-center min-h-[44px] px-3 rounded-md text-sm font-medium transition-colors ${
+          className={`inline-flex min-h-11 items-center rounded-full border-2 border-line px-4 text-sm font-bold transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
             isPaid
-              ? "bg-green-100 text-green-800 hover:bg-green-200"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              ? "bg-accent text-accent-ink shadow-hard-sm active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+              : "bg-surface text-ink-2 active:translate-y-px"
           }`}
         >
           {isPaid ? "✓ Settled" : "Mark settled"}
@@ -103,19 +103,19 @@ export default function SettleRow({
       )}
 
       {isPaid && !canMarkPaid && (
-        <span className="inline-flex items-center px-2 py-1 rounded-full bg-green-100 text-green-800 text-xs font-medium">
+        <span className="inline-flex items-center rounded-full bg-accent px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-accent-ink">
           ✓ Settled
         </span>
       )}
 
       {!isCurrentUser && !paymentHandle && (
-        <span className="text-sm text-gray-500 italic">
+        <span className="text-sm italic text-ink-3">
           {name} hasn't added a payment handle
         </span>
       )}
 
       {isCurrentUser && paymentMethod && paymentHandle && (
-        <span className="text-sm text-gray-600">
+        <span className="text-sm text-ink-2">
           Others pay you at {PAYMENT_METHOD_LABELS[paymentMethod]}{" "}
           {formatHandle(paymentMethod, paymentHandle)}
         </span>

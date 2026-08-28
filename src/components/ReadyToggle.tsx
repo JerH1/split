@@ -39,11 +39,9 @@ export default function ReadyToggle({
         onChange={(e) =>
           setReady({ participantId, secret, isReady: e.target.checked })
         }
-        className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+        className="h-5 w-5 rounded border-card border-line text-accent accent-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       />
-      <span className="text-sm font-medium text-gray-800">
-        I'm done claiming
-      </span>
+      <span className="text-sm font-bold text-ink">I'm done claiming</span>
     </label>
   );
 }

@@ -7,17 +7,42 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
 
-    <title>Split</title>
+    <!-- Resolve the theme before first paint so the wrong one never flashes.
+         Mirrors resolveTheme() in src/lib/theme.ts. -->
+    <script>
+      (function () {
+        try {
+          var choice = localStorage.getItem("split_theme");
+          if (choice !== "light" && choice !== "dark") {
+            choice = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+          document.documentElement.dataset.theme = choice;
+        } catch (e) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+
+    <title>SplitSnax</title>
     <meta
       name="description"
       content="Snap a receipt, share a code, and split the bill in real time."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Figtree:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
     />
 
     <!-- The whole flow is a phone at a restaurant table, so the bill link is
          mostly opened from a message thread. These decide what that thread
          shows instead of a bare URL. -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Split — split the bill" />
+    <meta property="og:title" content="SplitSnax — split the bill" />
     <meta
       property="og:description"
       content="Snap a receipt, share a code, and split the bill in real time."
@@ -28,11 +53,23 @@
     <!-- Installability: add-to-home-screen matters for something used standing
          up, one-handed, with the check already on the table. -->
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#2563eb" />
+    <!-- Kept in sync with the active theme by useTheme(); these two are the
+         pre-JS fallback for a cold install. -->
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: light)"
+      content="#FFF6E9"
+    />
+    <meta
+      name="theme-color"
+      media="(prefers-color-scheme: dark)"
+      content="#08070C"
+    />
+    <link rel="icon" type="image/svg+xml" href="/mark.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="Split" />
+    <meta name="apple-mobile-web-app-title" content="SplitSnax" />
     <meta
       name="apple-mobile-web-app-status-bar-style"
       content="black-translucent"

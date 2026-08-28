@@ -45,14 +45,14 @@ export default function ReceiptBalance({
   return (
     <div
       role="status"
-      className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm"
+      className="rounded-card border-card border-alert bg-alert-tint p-3 text-sm"
     >
-      <p className="font-medium text-amber-900">
+      <p className="font-bold text-alert-ink">
         {isMissing
           ? `${formatCents(difference)} of this receipt isn't accounted for`
           : `Items add up to ${formatCents(difference)} more than the receipt`}
       </p>
-      <p className="mt-1 text-amber-800">
+      <p className="mt-1 text-ink-2">
         Receipt total {formatCents(receiptTotal)}, but items and fees come to{" "}
         {formatCents(accountedFor)}.{" "}
         {isMissing

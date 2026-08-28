@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 
-const BASE_TITLE = "Split";
+const BASE_TITLE = "SplitSnax";
 
 /**
  * Keeps <title> in sync with the current view. A single static title across

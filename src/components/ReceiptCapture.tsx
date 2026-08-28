@@ -115,7 +115,7 @@ export default function ReceiptCapture({
           type="button"
           onClick={() => cameraInputRef.current?.click()}
           disabled={isDisabled}
-          className="flex-1 min-h-[44px] bg-blue-600 text-white font-medium py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          className="flex min-h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-card border-card border-line bg-accent px-4 py-3 text-sm font-bold text-accent-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg
             aria-hidden="true"
@@ -136,7 +136,7 @@ export default function ReceiptCapture({
           type="button"
           onClick={() => galleryInputRef.current?.click()}
           disabled={isDisabled}
-          className="flex-1 min-h-[44px] bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+          className="flex min-h-12 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-card border-card border-line bg-surface px-4 py-3 text-sm font-bold text-ink shadow-hard-sm transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-0.5 active:translate-y-0.5 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50"
         >
           <svg
             aria-hidden="true"
@@ -156,7 +156,7 @@ export default function ReceiptCapture({
       </div>
 
       {uploadError && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm font-semibold text-alert-ink">
           {uploadError}
         </p>
       )}

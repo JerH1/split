@@ -17,6 +17,9 @@ import {
 } from "../lib/billHistory";
 import { getLastUsedName, setLastUsedName } from "../lib/userPreferences";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
+import Mark, { Wordmark } from "../components/Mark";
+import ThemeToggle from "../components/ThemeToggle";
+import { personColorVar } from "../lib/participantColors";
 
 export default function Home() {
   useDocumentTitle();
@@ -231,14 +234,17 @@ export default function Home() {
     !canSubmit || (isValidCode && !sessionFound && !sessionNotFound);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
-      <div className="w-full max-w-md text-center space-y-8">
+    <div className="relative min-h-screen px-5 pt-14 pb-10">
+      <ThemeToggle className="absolute top-5 right-5" />
+
+      <div className="mx-auto w-full max-w-md space-y-7">
         {/* App branding */}
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-gray-900">Split</h1>
-          <p className="text-lg text-gray-700">
-            Split bills with friends, instantly.
-          </p>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <Mark size={62} />
+          <h1 className="text-[42px] leading-[1.3]">
+            <Wordmark />
+          </h1>
+          <p className="text-ink-2">Everyone grabs what they ate.</p>
         </div>
 
         {/* Unified form */}
@@ -247,7 +253,7 @@ export default function Home() {
           <div className="space-y-2">
             <label
               htmlFor="name"
-              className="block text-sm font-medium text-gray-700 text-left"
+              className="block text-sm font-semibold text-ink-2"
             >
               Your name
             </label>
@@ -259,7 +265,7 @@ export default function Home() {
               placeholder="Enter your name"
               autoComplete="name"
               autoCapitalize="words"
-              className="w-full px-4 py-3 text-lg border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+              className="w-full min-h-14 rounded-tile border-card border-line bg-surface px-4 text-lg font-semibold text-ink shadow-hard placeholder:font-normal placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page"
             />
           </div>
 
@@ -267,10 +273,10 @@ export default function Home() {
           <div className="space-y-2">
             <label
               htmlFor="code"
-              className="block text-sm font-medium text-gray-700 text-left"
+              className="block text-sm font-semibold text-ink-2"
             >
-              Bill code{" "}
-              <span className="text-gray-600 font-normal">(optional)</span>
+              Got a code?{" "}
+              <span className="font-normal text-ink-3">optional</span>
             </label>
             <input
               id="code"
@@ -284,19 +290,23 @@ export default function Home() {
               maxLength={6}
               autoComplete="off"
               aria-describedby="code-status"
-              className="w-full px-4 py-3 text-lg font-mono tracking-widest text-center border border-gray-500 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent uppercase"
+              className={`tabular w-full min-h-14 rounded-tile bg-surface px-4 text-center text-xl font-bold uppercase tracking-[0.4em] indent-[0.4em] text-ink placeholder:text-ink-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page ${
+                sessionFound
+                  ? "border-card border-line shadow-hard"
+                  : "border-card border-dashed border-ink-4"
+              }`}
             />
             {/* Code status message. The wrapper is always rendered so screen
                 readers pick up the change rather than a node insertion. */}
             <div id="code-status" aria-live="polite" className="min-h-5">
               {isValidCode && (
                 <p
-                  className={`text-sm ${
+                  className={`text-sm font-semibold ${
                     sessionFound
-                      ? "text-green-700"
+                      ? "text-ink"
                       : isCheckingSession || isCheckingStored
-                        ? "text-gray-600"
-                        : "text-red-700"
+                        ? "text-ink-3"
+                        : "text-alert"
                   }`}
                 >
                   {isCheckingSession || isCheckingStored
@@ -313,9 +323,11 @@ export default function Home() {
           {joinError && (
             <div
               role="alert"
-              className="p-3 bg-red-50 border border-red-300 rounded-lg"
+              className="rounded-tile border-card border-alert bg-alert-tint p-3"
             >
-              <p className="text-red-700 text-sm">{joinError}</p>
+              <p className="text-sm font-semibold text-alert-ink">
+                {joinError}
+              </p>
             </div>
           )}
 
@@ -323,46 +335,69 @@ export default function Home() {
           <button
             type="submit"
             disabled={buttonDisabled}
-            className={`w-full py-4 text-lg font-semibold text-white rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
-              isJoinMode
-                ? "bg-blue-700 hover:bg-blue-800 active:bg-blue-900"
-                : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-            } disabled:bg-gray-300 disabled:text-gray-700 disabled:cursor-not-allowed`}
+            className="flex w-full min-h-15 items-center justify-center gap-2 rounded-card border-card border-line bg-accent font-display text-xl font-extrabold text-accent-ink shadow-hard-lg transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:border-ink-4 disabled:bg-surface disabled:text-ink-4 disabled:shadow-none disabled:active:translate-x-0 disabled:active:translate-y-0"
           >
+            {!isSubmitting && !isCheckingSession && (
+              <svg
+                aria-hidden="true"
+                className="h-5 w-5"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2.8}
+                strokeLinecap="round"
+              >
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            )}
             {buttonText}
           </button>
         </form>
 
         {/* Bill history section */}
         {history.length > 0 && (
-          <div className="mt-8 space-y-3">
-            <h2 className="text-sm font-medium text-gray-600 uppercase tracking-wide">
-              Recent Bills
+          <div className="space-y-3">
+            <h2 className="text-xs font-bold uppercase tracking-[0.18em] text-ink-3">
+              Recent
             </h2>
-            <div className="space-y-2">
-              {history.map((bill) => (
+            <div className="space-y-3">
+              {history.map((bill, index) => (
                 <Link
                   key={bill.code}
                   to={`/bill/${bill.code}/items`}
-                  className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
+                  className="flex items-center gap-3 rounded-card border-card border-line bg-surface p-3 shadow-hard transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-page active:translate-x-1 active:translate-y-1 active:shadow-none"
                 >
-                  <div className="flex justify-between items-center">
-                    <div className="flex flex-col items-start">
-                      <div className="font-medium text-gray-900">
-                        {merchantByCode.get(bill.code) ||
-                          bill.merchant ||
-                          `Bill ${bill.code}`}
-                      </div>
-                      <div className="text-sm text-gray-600">
-                        {new Date(bill.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                    {bill.total && (
-                      <div className="text-lg font-semibold text-gray-900">
-                        ${(bill.total / 100).toFixed(2)}
-                      </div>
-                    )}
-                  </div>
+                  <span
+                    aria-hidden="true"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-card border-line"
+                    style={{ background: personColorVar(index) }}
+                  >
+                    <svg
+                      className="h-5 w-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="var(--on-person)"
+                      strokeWidth={2.2}
+                      strokeLinecap="round"
+                    >
+                      <path d="M5 12h14M7 8h10M9 16h6" />
+                    </svg>
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col items-start">
+                    <span className="truncate font-display text-lg font-bold text-ink">
+                      {merchantByCode.get(bill.code) ||
+                        bill.merchant ||
+                        `Bill ${bill.code}`}
+                    </span>
+                    <span className="text-xs font-medium text-ink-3">
+                      {new Date(bill.createdAt).toLocaleDateString()}
+                    </span>
+                  </span>
+                  {bill.total !== undefined && (
+                    <span className="tabular font-display text-xl font-extrabold text-ink">
+                      ${(bill.total / 100).toFixed(2)}
+                    </span>
+                  )}
                 </Link>
               ))}
             </div>

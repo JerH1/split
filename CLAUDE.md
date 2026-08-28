@@ -63,6 +63,25 @@ To run a single test file: `npx vitest run convex/calculations.test.ts`
 - `components/Summary.tsx` — Per-person breakdown (subtotal + proportional tax/tip)
 - `components/TaxTipSettings.tsx` — Configure tax/tip (percent of subtotal, percent of total, or fixed)
 
+### Theming
+
+Two themes ship: **Snack Pack** (light) and **Night Snack** (dark), swapped by
+`components/ThemeToggle.tsx`. Never hardcode a colour in a component.
+
+- All themed values are CSS custom properties in `src/index.css`, mapped into
+  Tailwind utilities by `@theme inline` — that is what makes `bg-surface` /
+  `text-ink` follow the theme instead of baking a colour in at build time.
+- The resolved theme is always written to `<html data-theme>`: by the inline
+  script in `index.html` before first paint, and by `lib/useTheme.ts` after,
+  which also keeps the `theme-color` meta tags in sync. There is no
+  `prefers-color-scheme` block in the CSS on purpose.
+- The rule both themes follow: **an outline means you can press it, colour
+  means whose it is.** Participants get a stable colour by join order via
+  `lib/participantColors.ts`; the accent is reserved for actions, so nobody is
+  ever the same colour as a button.
+- `components/Mark.tsx` is the app mark. `<Mark>` holds down to 32px;
+  `<MarkSmall>` is a separate drawing for 24px and under.
+
 ### Environment Variables
 
 - `ANTHROPIC_API_KEY` — Required in `.env.local` for receipt OCR
